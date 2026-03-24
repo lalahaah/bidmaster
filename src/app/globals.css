@@ -2,26 +2,43 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 레퍼런스(02SaaSSubscription) 라이트 테마 변수 */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #fcfdfe;
+  --bg-alt: #f4f7fa;
+  --dark: #161c2d;
+  --primary: #473bf0;
+  --accent: #68D585;
+  --border: #e7e9ed;
+  --text-muted: #717182;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--dark);
+  font-family: var(--font-jakarta, 'Plus Jakarta Sans', Inter, sans-serif);
+  -webkit-font-smoothing: antialiased;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+/* FAQ/Accordion 유지 */
+.faq-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease, padding 0.35s ease;
 }
+.faq-content.open {
+  max-height: 300px;
+}
+
+/* 스크롤바 */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #f4f7fa; }
+::-webkit-scrollbar-thumb { background: rgba(71,59,240,0.3); border-radius: 3px; }
