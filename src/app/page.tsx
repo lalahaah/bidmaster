@@ -87,11 +87,11 @@ function Hero() {
             무료 체험 시작하기
             <ArrowRight color="white" />
           </Link>
-          <a href="#demo"
+          <Link href="/demo"
             className="inline-flex items-center justify-center font-bold rounded-lg px-6 py-3.5 transition-colors hover:bg-gray-100"
             style={{ fontSize: '17px', letterSpacing: '-0.6px', color: '#161c2d' }}>
             데모 살펴보기
-          </a>
+          </Link>
         </div>
       </div>
 
