@@ -12,7 +12,15 @@ function LoginContent() {
   const [error, setError] = useState<string | null>(null)
 
   const redirect = searchParams.get('redirect') ?? '/dashboard'
-  const isLoginMode = searchParams.get('mode') === 'login'
+  const [isLoginMode, setIsLoginMode] = useState(searchParams.get('mode') === 'login')
+
+  const switchTab = (login: boolean) => {
+    setIsLoginMode(login)
+    const url = new URL(window.location.href)
+    if (login) url.searchParams.set('mode', 'login')
+    else url.searchParams.delete('mode')
+    window.history.replaceState(null, '', url.toString())
+  }
 
   useEffect(() => {
     if (!loading && user) {
@@ -75,6 +83,26 @@ function LoginContent() {
           <p className="text-white/40 text-sm">
             {isLoginMode ? 'Google 계정으로 로그인하세요' : 'Google 계정으로 30초 만에 가입하세요'}
           </p>
+        </div>
+
+        {/* 탭 */}
+        <div
+          className="flex rounded-xl p-1 mb-6"
+          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+        >
+          {[{ label: '로그인', value: true }, { label: '시작하기', value: false }].map(tab => (
+            <button
+              key={tab.label}
+              onClick={() => switchTab(tab.value)}
+              className="flex-1 py-2 rounded-lg text-sm font-bold transition-all duration-200"
+              style={isLoginMode === tab.value
+                ? { background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.9)' }
+                : { color: 'rgba(255,255,255,0.35)' }
+              }
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         {/* 카드 */}
