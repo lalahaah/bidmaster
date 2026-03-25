@@ -68,7 +68,7 @@ function LoginContent() {
       <div className="relative w-full max-w-md">
         {/* 로고 */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2.5 mb-6">
+          <a href="/" className="inline-flex items-center gap-2.5 mb-6 hover:opacity-80 transition-opacity">
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center"
               style={{ background: 'linear-gradient(135deg, #4f6ef7, #7c3aed)' }}
@@ -76,7 +76,7 @@ function LoginContent() {
               <span className="text-white font-bold">B</span>
             </div>
             <span className="text-white font-bold text-xl tracking-tight">BidMaster</span>
-          </div>
+          </a>
           <h1 className="text-2xl font-bold text-white mb-2">
             {isLoginMode ? '로그인' : '시작하기'}
           </h1>
