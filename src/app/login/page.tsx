@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 
-export default function LoginPage() {
+function LoginContent() {
   const { user, loading, signInWithGoogle } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -160,6 +160,18 @@ export default function LoginPage() {
         </p>
       </div>
     </main>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#0d0820' }}>
+        <div className="w-8 h-8 rounded-full border-2 border-blue-500/30 border-t-blue-500 animate-spin" />
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   )
 }
 

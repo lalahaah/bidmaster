@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/notices/fetch",
+      "schedule": "0 23 * * *"
+    }
+  ]
+}

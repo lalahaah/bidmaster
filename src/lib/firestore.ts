@@ -124,3 +124,20 @@ export async function getBidNoticeById(id: string): Promise<BidNotice | null> {
   if (!snap.exists()) return null
   return { id: snap.id, ...snap.data() } as BidNotice
 }
+
+export async function saveBidNotice(
+  id: string,
+  data: Omit<BidNotice, 'id'>
+): Promise<void> {
+  const ref = doc(db, 'bid_notices', id) as DocumentReference
+  await setDoc(ref, data)
+}
+
+export async function updateMatchStatus(
+  id: string,
+  matchStatus: BidNotice['matchStatus'],
+  extra?: Record<string, unknown>
+): Promise<void> {
+  const ref = doc(db, 'bid_notices', id)
+  await updateDoc(ref, { matchStatus, ...extra })
+}
