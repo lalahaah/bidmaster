@@ -11,7 +11,8 @@ import {
 import {
   User,
   onAuthStateChanged,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut as firebaseSignOut,
 } from 'firebase/auth'
 import { auth, googleProvider } from '@/lib/firebase'
@@ -41,6 +42,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const doc = await getUserDoc(user.uid)
     setUserDoc(doc)
   }, [user])
+
+  // 리다이렉트 로그인 결과 처리
+  useEffect(() => {
+    getRedirectResult(auth).catch(() => {})
+  }, [])
 
   // Firebase Auth 상태 감지
   useEffect(() => {
@@ -74,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = async () => {
     try {
-      await signInWithPopup(auth, googleProvider)
+      await signInWithRedirect(auth, googleProvider)
     } catch (error) {
       console.error('Google 로그인 실패:', error)
       throw error
