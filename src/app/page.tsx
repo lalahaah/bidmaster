@@ -50,11 +50,18 @@ function Nav() {
         </nav>
 
         {/* CTA */}
-        <Link href="/login"
-          className="hidden md:inline-flex items-center justify-center text-white font-bold rounded-lg px-5 py-2.5 transition-opacity hover:opacity-90"
-          style={{ background: '#473bf0', fontSize: '17px', letterSpacing: '-0.5px' }}>
-          무료 체험 시작
-        </Link>
+        <div className="hidden md:flex items-center gap-3">
+          <Link href="/login?mode=login"
+            className="font-bold rounded-lg px-4 py-2.5 transition-colors hover:text-[#473bf0]"
+            style={{ fontSize: '15px', color: '#161c2d', letterSpacing: '-0.3px' }}>
+            로그인
+          </Link>
+          <Link href="/login"
+            className="inline-flex items-center justify-center text-white font-bold rounded-lg px-5 py-2.5 transition-opacity hover:opacity-90"
+            style={{ background: '#473bf0', fontSize: '15px', letterSpacing: '-0.5px' }}>
+            무료 체험 시작
+          </Link>
+        </div>
       </div>
     </header>
   )

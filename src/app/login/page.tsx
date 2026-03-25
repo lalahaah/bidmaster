@@ -12,6 +12,7 @@ function LoginContent() {
   const [error, setError] = useState<string | null>(null)
 
   const redirect = searchParams.get('redirect') ?? '/dashboard'
+  const isLoginMode = searchParams.get('mode') === 'login'
 
   useEffect(() => {
     if (!loading && user) {
@@ -68,9 +69,11 @@ function LoginContent() {
             </div>
             <span className="text-white font-bold text-xl tracking-tight">BidMaster</span>
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">시작하기</h1>
+          <h1 className="text-2xl font-bold text-white mb-2">
+            {isLoginMode ? '로그인' : '시작하기'}
+          </h1>
           <p className="text-white/40 text-sm">
-            Google 계정으로 30초 만에 가입하세요
+            {isLoginMode ? 'Google 계정으로 로그인하세요' : 'Google 계정으로 30초 만에 가입하세요'}
           </p>
         </div>
 
@@ -119,7 +122,7 @@ function LoginContent() {
             ) : (
               <GoogleIcon />
             )}
-            {isSigningIn ? '로그인 중...' : 'Google로 계속하기'}
+            {isSigningIn ? '로그인 중...' : isLoginMode ? 'Google로 로그인하기' : 'Google로 계속하기'}
           </button>
 
           <div className="mt-6 pt-6 border-t border-white/5">
