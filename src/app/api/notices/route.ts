@@ -11,26 +11,16 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { adminDb } from '@/lib/firebase-admin'
-import { verifyIdToken } from '@/lib/firebase-admin'
+import { adminDb, requireAuth } from '@/lib/firebase-admin'
 import type { BidNotice } from '@/types'
 import type { Query, QueryDocumentSnapshot } from 'firebase-admin/firestore'
 
 export async function GET(req: NextRequest) {
-  // 인증 확인
-  const token = req.headers.get('authorization')?.replace('Bearer ', '')
-  if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  try {
-    await verifyIdToken(token)
-  } catch {
-    return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-  }
+  const auth = await requireAuth(req)
+  if (auth instanceof NextResponse) return auth
 
   const { searchParams } = new URL(req.url)
-  const status   = searchParams.get('status')
+  const status = searchParams.get('status')
   const minScore = searchParams.get('minScore')
   const pageLimit = parseInt(searchParams.get('limit') ?? '20', 10)
 

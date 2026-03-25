@@ -10,7 +10,6 @@ import {
   limit,
   getDocs,
   Timestamp,
-  DocumentReference,
 } from 'firebase/firestore'
 import { db } from './firebase'
 import type {
@@ -21,7 +20,9 @@ import type {
   BidFilterOptions,
 } from '@/types'
 
-// ─── 사용자 문서 ─────────────────────────────────────────────
+function flattenToNested(prefix: string, obj: Record<string, unknown>) {
+  return Object.fromEntries(Object.entries(obj).map(([k, v]) => [`${prefix}.${k}`, v]))
+}
 
 export async function getUserDoc(uid: string): Promise<UserDocument | null> {
   const ref = doc(db, 'users', uid)
@@ -72,12 +73,7 @@ export async function updateUserProfile(
   profile: Partial<CompanyProfile>
 ): Promise<void> {
   const ref = doc(db, 'users', uid)
-  await updateDoc(ref, {
-    ...Object.fromEntries(
-      Object.entries(profile).map(([k, v]) => [`profile.${k}`, v])
-    ),
-    updatedAt: Timestamp.now(),
-  })
+  await updateDoc(ref, { ...flattenToNested('profile', profile as Record<string, unknown>), updatedAt: Timestamp.now() })
 }
 
 export async function updateNotificationSettings(
@@ -85,12 +81,7 @@ export async function updateNotificationSettings(
   settings: Partial<NotificationSettings>
 ): Promise<void> {
   const ref = doc(db, 'users', uid)
-  await updateDoc(ref, {
-    ...Object.fromEntries(
-      Object.entries(settings).map(([k, v]) => [`settings.${k}`, v])
-    ),
-    updatedAt: Timestamp.now(),
-  })
+  await updateDoc(ref, { ...flattenToNested('settings', settings as Record<string, unknown>), updatedAt: Timestamp.now() })
 }
 
 // ─── 입찰 공고 ───────────────────────────────────────────────
@@ -123,14 +114,6 @@ export async function getBidNoticeById(id: string): Promise<BidNotice | null> {
   const snap = await getDoc(ref)
   if (!snap.exists()) return null
   return { id: snap.id, ...snap.data() } as BidNotice
-}
-
-export async function saveBidNotice(
-  id: string,
-  data: Omit<BidNotice, 'id'>
-): Promise<void> {
-  const ref = doc(db, 'bid_notices', id) as DocumentReference
-  await setDoc(ref, data)
 }
 
 export async function updateMatchStatus(

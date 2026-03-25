@@ -7,38 +7,28 @@ import type { CompanyProfile, MatchStatus } from '@/types'
 import type { G2BNoticeItem } from './g2b'
 import { parseAmountToManwon } from './g2b'
 
-// ─── 매칭 결과 타입 ──────────────────────────────────────────
-
 export interface MatchResult {
   status: MatchStatus
-  score: number       // 0~100 (AI 분석 전 기본 점수)
-  reasons: string[]   // 매칭/불가 사유 목록
-  warnings: string[]  // 조건부 경고 사항
+  score: number
+  reasons: string[]
+  warnings: string[]
 }
 
-// ─── 업종 코드 매칭 ──────────────────────────────────────────
-// 나라장터 공고 업무구분명(bsnsDivNm)과 회사 업종코드 비교
+const BIZ_CODE_MAP: Record<string, string[]> = {
+  '용': ['용역', '서비스', 'SW', '소프트웨어', 'IT', '정보'],
+  '물': ['물품', '구매', '납품'],
+  '공': ['공사', '건설', '시설'],
+  '01': ['소프트웨어', 'IT', '정보', '시스템', '개발'],
+  '02': ['물품', '구매'],
+  '03': ['공사', '건설'],
+  '04': ['용역', '서비스'],
+}
 
-/** 업종코드 앞 2자리로 대분류 비교 */
 function bizCodeMatches(companyCodes: string[], noticeDivNm: string): boolean {
-  if (!noticeDivNm || companyCodes.length === 0) return true // 업종 제한 없으면 통과
-
-  // 공고의 업무구분명에 회사 업종코드 키워드가 포함되는지 확인
+  if (!noticeDivNm || companyCodes.length === 0) return true
   return companyCodes.some(code => {
-    const prefix = code.slice(0, 2)
-    // 주요 업종코드 → 업무구분명 매핑
-    const bizMap: Record<string, string[]> = {
-      '용': ['용역', '서비스', 'SW', '소프트웨어', 'IT', '정보'],
-      '물': ['물품', '구매', '납품'],
-      '공': ['공사', '건설', '시설'],
-      '01': ['소프트웨어', 'IT', '정보', '시스템', '개발'],
-      '02': ['물품', '구매'],
-      '03': ['공사', '건설'],
-      '04': ['용역', '서비스'],
-    }
-    const keywords = bizMap[prefix] ?? []
-    return keywords.some(kw => noticeDivNm.includes(kw)) ||
-      noticeDivNm.includes(code)
+    const keywords = BIZ_CODE_MAP[code.slice(0, 2)] ?? []
+    return keywords.some(kw => noticeDivNm.includes(kw)) || noticeDivNm.includes(code)
   })
 }
 
@@ -186,30 +176,3 @@ export function matchNoticeToCompany(
   return { status, score, reasons, warnings }
 }
 
-// ─── 배치 매칭 ───────────────────────────────────────────────
-
-/**
- * 공고 목록 전체를 회사 프로필에 대해 매칭합니다.
- * 점수 내림차순으로 정렬하여 반환합니다.
- */
-export function batchMatchNotices(
-  profile: CompanyProfile,
-  notices: G2BNoticeItem[]
-): Array<G2BNoticeItem & { matchResult: MatchResult }> {
-  return notices
-    .map(notice => ({
-      ...notice,
-      matchResult: matchNoticeToCompany(profile, notice),
-    }))
-    .sort((a, b) => b.matchResult.score - a.matchResult.score)
-}
-
-// ─── 간편 요약 ───────────────────────────────────────────────
-
-/** 매칭 결과를 한줄 요약 문자열로 변환 */
-export function matchResultSummary(result: MatchResult): string {
-  if (result.status === '불가') return `참가 불가 (점수 ${result.score})`
-  if (result.status === '가능') return `참가 가능 ✓ (점수 ${result.score})`
-  const warn = result.warnings[0] ?? '조건 확인 필요'
-  return `조건부 가능 (점수 ${result.score}) — ${warn}`
-}

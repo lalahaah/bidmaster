@@ -25,28 +25,28 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    console.log('[notices/fetch] 나라장터 공고 수집 시작')
     const notices = await fetchAllTodayNotices()
-    console.log(`[notices/fetch] ${notices.length}건 수집 완료`)
 
+    const docRefs = notices.map(n =>
+      adminDb.collection('bid_notices').doc(`${n.bidNtceNo}-${n.bidNtceOrd}`)
+    )
+
+    const snapshots = await Promise.all(docRefs.map(ref => ref.get()))
+    const existingIds = new Set(
+      snapshots.filter(s => s.exists).map(s => s.id)
+    )
+
+    const batch = adminDb.batch()
     let saved = 0
     let skipped = 0
 
-    for (const notice of notices) {
-      const id = `${notice.bidNtceNo}-${notice.bidNtceOrd}`
-
-      // 이미 존재하면 스킵
-      const existing = adminDb.collection('bid_notices').doc(id)
-      const snap = await existing.get()
-      if (snap.exists) {
-        skipped++
-        continue
-      }
+    notices.forEach((notice, i) => {
+      if (existingIds.has(docRefs[i].id)) { skipped++; return }
 
       const deadlineDate = parseG2BDate(notice.bidClseDt)
       const estimatedAmount = parseAmountToManwon(notice.presmptPrce || '0')
 
-      await existing.set({
+      batch.set(docRefs[i], {
         title: notice.bidNtceNm,
         orgName: notice.ntceInsttNm,
         bizCode: notice.bsnsDivNm || '',
@@ -60,22 +60,16 @@ export async function POST(req: NextRequest) {
         noticeUrl: notice.linkUrl || `https://www.g2b.go.kr/pt/menu/selectSubFrame.do?framesrc=/pt/menu/frameTgong.do?optn=${notice.bidNtceNo}`,
         matchStatus: '미분석',
         aiSummary: null,
-        rawData: notice,          // 원본 데이터 보존
+        rawData: notice,
         createdAt: Timestamp.now(),
         analyzedAt: null,
       })
-
       saved++
-    }
-
-    console.log(`[notices/fetch] 저장: ${saved}건, 스킵: ${skipped}건`)
-
-    return NextResponse.json({
-      ok: true,
-      fetched: notices.length,
-      saved,
-      skipped,
     })
+
+    await batch.commit()
+
+    return NextResponse.json({ ok: true, fetched: notices.length, saved, skipped })
   } catch (err) {
     console.error('[notices/fetch] 오류:', err)
     return NextResponse.json(
@@ -85,5 +79,4 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Vercel Cron 설정 (vercel.json에 추가 필요)
 export const dynamic = 'force-dynamic'

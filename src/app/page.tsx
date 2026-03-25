@@ -2,6 +2,35 @@
 
 import Link from 'next/link'
 
+const PROCESS_STEPS = [
+  { num: '01', title: '회사 프로필 등록', desc: '업종코드, 보유 면허, 최근 실적, 직원 수를 입력합니다. 5분이면 완료됩니다.' },
+  { num: '02', title: '공고 자동 수집', desc: '매일 오전 8시, 나라장터 전국 발주기관 공고를 자동으로 가져옵니다.' },
+  { num: '03', title: 'AI 분석 & 점수 산출', desc: 'Claude AI가 공고문 전체를 분석하고 0~100점 추천 점수를 산출합니다.' },
+  { num: '04', title: '카카오 알림톡 수신', desc: '70점 이상 공고는 즉시 카카오톡으로 전송됩니다. 모바일에서 바로 확인하세요.' },
+]
+
+const TESTIMONIALS = [
+  { quote: '"입찰 업무가 절반으로 줄었습니다"', body: '하루 2시간씩 나라장터를 뒤지던 게 이제는 카카오톡 확인으로 끝납니다. BidMaster 덕분에 전략에 집중할 수 있게 됐어요.', name: '김민준', role: '(주)한국건설 구매팀장', initials: 'K' },
+  { quote: '"놓치는 공고가 완전히 사라졌습니다"', body: '이전엔 좋은 공고를 마감 직전에야 발견하곤 했는데, 이제는 등록 당일 바로 알림을 받습니다. 낙찰률도 올랐어요.', name: '박서연', role: '코리아테크 대표이사', initials: 'P' },
+]
+
+const PRICING_PLANS = [
+  { tag: 'Basic', price: '49,000', sub: '월 구독', desc: '일 50건 공고 분석, 기본 AI 리포트, 카카오 알림 일 3건. 소규모 입찰 담당자에게 딱 맞습니다.', featured: false },
+  { tag: 'Pro', price: '129,000', sub: '월 구독', desc: '무제한 공고 분석, 심층 AI 리포트, 카카오 알림 무제한, 낙찰 확률 예측 포함. 가장 인기 있는 플랜.', featured: true },
+  { tag: 'Enterprise', price: '문의', sub: '맞춤 견적', desc: '팀 계정, 전담 CS, API 연동 지원. 대규모 조달 팀을 위한 커스텀 플랜입니다.', featured: false },
+]
+
+const FAQ_ITEMS = [
+  { q: '나라장터 API 연동은 어떻게 되나요?', a: '별도 설정 없이 BidMaster가 자동으로 조달청 API에 연결합니다. 회사 프로필만 입력하면 다음 날 아침부터 공고를 받을 수 있습니다.' },
+  { q: '카카오 알림은 어떻게 설정하나요?', a: '대시보드 설정에서 카카오톡 수신 번호와 알림 점수 임계값(기본 70점)을 입력하면 됩니다.' },
+  { q: '어떤 업종에서 사용할 수 있나요?', a: '나라장터에 등록된 모든 업종코드를 지원합니다. IT, 건설, 용역, 물품 등 공공조달에 참여하는 모든 중소기업이 사용 가능합니다.' },
+  { q: '구독은 언제든지 해지할 수 있나요?', a: '언제든지 위약금 없이 해지 가능합니다. 남은 기간은 그대로 사용하시고, 데이터는 30일간 보관됩니다.' },
+  { q: 'AI 분석 정확도는 어느 정도인가요?', a: '5년치 나라장터 낙찰 데이터로 훈련된 모델의 자격 매칭 정확도는 95% 이상입니다.' },
+  { q: '팀원과 함께 사용할 수 있나요?', a: 'Enterprise 플랜에서 팀 계정을 지원합니다. 여러 담당자가 함께 공고를 관리하고 알림을 설정할 수 있습니다.' },
+]
+
+const TRUSTED_COMPANIES = ['HYUNDAI', 'SAMSUNG', 'NAVER', 'KAKAO', 'SK GROUP']
+
 export default function LandingPage() {
   return (
     <div className="bg-[#111318] text-[#e2e2e8] font-body">
@@ -113,7 +142,7 @@ function Trust() {
       <div className="max-w-7xl mx-auto px-8 flex flex-col md:flex-row items-center justify-between gap-8">
         <span className="text-[#908f9d] font-headline font-bold text-sm tracking-widest uppercase opacity-60 shrink-0">국내 기업이 신뢰합니다</span>
         <div className="flex flex-wrap justify-center gap-12 grayscale opacity-30 hover:grayscale-0 hover:opacity-100 transition-all duration-500">
-          {['HYUNDAI', 'SAMSUNG', 'NAVER', 'KAKAO', 'SK GROUP'].map(name => (
+          {TRUSTED_COMPANIES.map(name => (
             <div key={name} className="font-headline font-black text-xl tracking-tighter text-[#e2e2e8]">{name}</div>
           ))}
         </div>
@@ -185,12 +214,6 @@ function Features() {
 }
 
 function Process() {
-  const steps = [
-    { num: '01', title: '회사 프로필 등록', desc: '업종코드, 보유 면허, 최근 실적, 직원 수를 입력합니다. 5분이면 완료됩니다.' },
-    { num: '02', title: '공고 자동 수집', desc: '매일 오전 8시, 나라장터 전국 발주기관 공고를 자동으로 가져옵니다.' },
-    { num: '03', title: 'AI 분석 & 점수 산출', desc: 'Claude AI가 공고문 전체를 분석하고 0~100점 추천 점수를 산출합니다.' },
-    { num: '04', title: '카카오 알림톡 수신', desc: '70점 이상 공고는 즉시 카카오톡으로 전송됩니다. 모바일에서 바로 확인하세요.' },
-  ]
   return (
     <section id="process" className="py-32 px-8 bg-[#0c0e12]">
       <div className="max-w-7xl mx-auto">
@@ -199,7 +222,7 @@ function Process() {
           <p className="text-[#c6c5d4] max-w-xl mx-auto font-body">복잡한 설정 없이 5분이면 모든 준비가 끝납니다.</p>
         </div>
         <div className="grid md:grid-cols-2 gap-6">
-          {steps.map(s => (
+          {PROCESS_STEPS.map(s => (
             <div key={s.num} className="bg-[#1a1c20] rounded-2xl p-8 flex gap-6 items-start">
               <div className="shrink-0 w-14 h-14 rounded-xl bg-[#adc7ff]/10 border border-[#adc7ff]/15 flex items-center justify-center">
                 <span className="font-headline font-black text-xl text-[#adc7ff]">{s.num}</span>
@@ -233,16 +256,12 @@ function Process() {
 }
 
 function Testimonials() {
-  const testimonials = [
-    { quote: '"입찰 업무가 절반으로 줄었습니다"', body: '하루 2시간씩 나라장터를 뒤지던 게 이제는 카카오톡 확인으로 끝납니다. BidMaster 덕분에 전략에 집중할 수 있게 됐어요.', name: '김민준', role: '(주)한국건설 구매팀장', initials: 'K' },
-    { quote: '"놓치는 공고가 완전히 사라졌습니다"', body: '이전엔 좋은 공고를 마감 직전에야 발견하곤 했는데, 이제는 등록 당일 바로 알림을 받습니다. 낙찰률도 올랐어요.', name: '박서연', role: '코리아테크 대표이사', initials: 'P' },
-  ]
   return (
     <section className="py-24 px-8">
       <div className="max-w-6xl mx-auto">
         <div className="mb-16 text-center"><h2 className="font-headline font-extrabold text-4xl text-[#e2e2e8]">실제 고객의 이야기</h2></div>
         <div className="grid md:grid-cols-2 gap-6">
-          {testimonials.map(t => (
+          {TESTIMONIALS.map(t => (
             <div key={t.name} className="bg-[#1a1c20] rounded-2xl p-10">
               <div className="w-14 h-14 rounded-full flex items-center justify-center mb-6 text-[#002e68] font-black text-xl" style={{ background: 'linear-gradient(135deg, #adc7ff, #e4c27c)' }}>{t.initials}</div>
               <h3 className="font-headline font-bold text-2xl text-[#e2e2e8] mb-4 leading-tight">{t.quote}</h3>
@@ -257,11 +276,6 @@ function Testimonials() {
 }
 
 function Pricing() {
-  const plans = [
-    { tag: 'Basic', price: '49,000', sub: '월 구독', desc: '일 50건 공고 분석, 기본 AI 리포트, 카카오 알림 일 3건. 소규모 입찰 담당자에게 딱 맞습니다.', featured: false },
-    { tag: 'Pro', price: '129,000', sub: '월 구독', desc: '무제한 공고 분석, 심층 AI 리포트, 카카오 알림 무제한, 낙찰 확률 예측 포함. 가장 인기 있는 플랜.', featured: true },
-    { tag: 'Enterprise', price: '문의', sub: '맞춤 견적', desc: '팀 계정, 전담 CS, API 연동 지원. 대규모 조달 팀을 위한 커스텀 플랜입니다.', featured: false },
-  ]
   return (
     <section id="pricing" className="py-24 px-8 bg-[#0c0e12]">
       <div className="max-w-6xl mx-auto">
@@ -270,7 +284,7 @@ function Pricing() {
           <p className="text-[#c6c5d4] max-w-xl mx-auto font-body">14일 무료 체험으로 시작하고, 필요할 때 업그레이드 하세요. 신용카드 불필요.</p>
         </div>
         <div className="grid md:grid-cols-3 gap-6">
-          {plans.map(p => (
+          {PRICING_PLANS.map(p => (
             <div key={p.tag} className={`rounded-2xl p-8 flex flex-col ${p.featured ? 'bg-[#adc7ff]/10 border border-[#adc7ff]/25' : 'bg-[#1a1c20] border border-[#454652]/10'}`}>
               <div className="inline-block mb-6"><span className={`text-xs font-bold tracking-widest uppercase px-3 py-1 rounded-full ${p.featured ? 'bg-[#adc7ff]/15 text-[#adc7ff]' : 'bg-[#282a2e] text-[#908f9d]'}`}>{p.tag}</span></div>
               <div className="mb-1"><span className="font-headline font-black text-5xl text-[#e2e2e8] tracking-tight">{p.price === '문의' ? '문의' : `₩${p.price}`}</span></div>
@@ -288,14 +302,6 @@ function Pricing() {
 }
 
 function FAQ() {
-  const faqs = [
-    { q: '나라장터 API 연동은 어떻게 되나요?', a: '별도 설정 없이 BidMaster가 자동으로 조달청 API에 연결합니다. 회사 프로필만 입력하면 다음 날 아침부터 공고를 받을 수 있습니다.' },
-    { q: '카카오 알림은 어떻게 설정하나요?', a: '대시보드 설정에서 카카오톡 수신 번호와 알림 점수 임계값(기본 70점)을 입력하면 됩니다.' },
-    { q: '어떤 업종에서 사용할 수 있나요?', a: '나라장터에 등록된 모든 업종코드를 지원합니다. IT, 건설, 용역, 물품 등 공공조달에 참여하는 모든 중소기업이 사용 가능합니다.' },
-    { q: '구독은 언제든지 해지할 수 있나요?', a: '언제든지 위약금 없이 해지 가능합니다. 남은 기간은 그대로 사용하시고, 데이터는 30일간 보관됩니다.' },
-    { q: 'AI 분석 정확도는 어느 정도인가요?', a: '5년치 나라장터 낙찰 데이터로 훈련된 모델의 자격 매칭 정확도는 95% 이상입니다.' },
-    { q: '팀원과 함께 사용할 수 있나요?', a: 'Enterprise 플랜에서 팀 계정을 지원합니다. 여러 담당자가 함께 공고를 관리하고 알림을 설정할 수 있습니다.' },
-  ]
   return (
     <section id="faq" className="py-24 px-8">
       <div className="max-w-6xl mx-auto">
@@ -304,7 +310,7 @@ function FAQ() {
           <p className="text-[#c6c5d4] font-body">원하는 답변을 찾지 못하셨나요?{' '}<a href="mailto:support@bidmaster.io" className="text-[#adc7ff] font-bold hover:opacity-80 transition-opacity">문의하기</a></p>
         </div>
         <div className="grid md:grid-cols-2 gap-6">
-          {faqs.map(f => (
+          {FAQ_ITEMS.map(f => (
             <div key={f.q} className="bg-[#1a1c20] rounded-2xl p-7 flex gap-4">
               <div className="w-6 h-6 rounded-full bg-[#e4c27c]/20 flex items-center justify-center shrink-0 mt-0.5">
                 <svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="#e4c27c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
