@@ -2,14 +2,14 @@
  * POST /api/match
  *
  * 로그인한 사용자의 회사 프로필을 기준으로
- * '미분석' 상태인 공고들을 일괄 매칭합니다.
+ * '미분석' 상태인 공고들을 Claude AI로 일괄 분석합니다.
  *
- * Body: { limit?: number }  — 한 번에 처리할 최대 건수 (기본 50)
+ * Body: { limit?: number }  — 한 번에 처리할 최대 건수 (기본 20)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, requireAuth } from '@/lib/firebase-admin'
-import { matchNoticeToCompany } from '@/lib/matching'
+import { analyzeNoticeWithAI } from '@/lib/ai-analysis'
 import type { CompanyProfile } from '@/types'
 import type { G2BNoticeItem } from '@/lib/g2b'
 
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   const { uid } = auth
 
   const body = await req.json().catch(() => ({}))
-  const batchLimit: number = body.limit ?? 50
+  const batchLimit: number = body.limit ?? 20
 
   try {
     const userSnap = await adminDb.collection('users').doc(uid).get()
@@ -43,32 +43,44 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, matched: 0, message: '매칭할 공고가 없습니다.' })
     }
 
-    const batch = adminDb.batch()
+    // Claude API는 병렬 호출 (단, 과도한 동시 요청 방지를 위해 5개씩 처리)
+    const docs = unanalyzed.docs
     let matched = 0
+    let failed = 0
+    const batch = adminDb.batch()
 
-    for (const doc of unanalyzed.docs) {
-      const raw = doc.data().rawData as G2BNoticeItem | undefined
+    for (let i = 0; i < docs.length; i += 5) {
+      const chunk = docs.slice(i, i + 5)
+      const results = await Promise.allSettled(
+        chunk.map(async (doc) => {
+          const raw = doc.data().rawData as G2BNoticeItem | undefined
+          if (!raw) return null
 
-      if (!raw) {
-        batch.update(doc.ref, { matchStatus: '조건부' as const })
-        continue
+          const { aiSummary, matchStatus } = await analyzeNoticeWithAI(profile, raw)
+          return { ref: doc.ref, aiSummary, matchStatus }
+        })
+      )
+
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value) {
+          const { ref, aiSummary, matchStatus } = result.value
+          batch.update(ref, {
+            matchStatus,
+            matchScore: aiSummary.score,
+            aiSummary,
+            analyzedAt: new Date(),
+            analyzedBy: uid,
+          })
+          matched++
+        } else {
+          failed++
+        }
       }
-
-      const result = matchNoticeToCompany(profile, raw)
-      batch.update(doc.ref, {
-        matchStatus: result.status,
-        matchScore: result.score,
-        matchReasons: result.reasons,
-        matchWarnings: result.warnings,
-        matchedAt: new Date(),
-        matchedBy: uid,
-      })
-      matched++
     }
 
     await batch.commit()
 
-    return NextResponse.json({ ok: true, matched, total: unanalyzed.size })
+    return NextResponse.json({ ok: true, matched, failed, total: unanalyzed.size })
   } catch (err) {
     console.error('[match] 오류:', err)
     return NextResponse.json({ error: String(err) }, { status: 500 })
