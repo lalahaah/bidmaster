@@ -45,11 +45,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // 리다이렉트 로그인 결과 처리
   useEffect(() => {
+    if (!auth) return
     getRedirectResult(auth).catch(() => {})
   }, [])
 
   // Firebase Auth 상태 감지
   useEffect(() => {
+    if (!auth) { setLoading(false); return }
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser)
 
@@ -79,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signInWithGoogle = async () => {
+    if (!auth) throw new Error('Firebase가 초기화되지 않았습니다.')
     try {
       await signInWithRedirect(auth, googleProvider)
     } catch (error) {
@@ -88,6 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signOut = async () => {
+    if (!auth) return
     try {
       await firebaseSignOut(auth)
       setUser(null)
