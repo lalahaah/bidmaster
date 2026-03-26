@@ -14,6 +14,9 @@ import {
   signInWithRedirect,
   getRedirectResult,
   signOut as firebaseSignOut,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
 } from 'firebase/auth'
 import { auth, googleProvider } from '@/lib/firebase'
 import { getUserDoc, createUserDoc } from '@/lib/firestore'
@@ -25,6 +28,8 @@ interface AuthContextValue {
   userDoc: UserDocument | null
   loading: boolean
   signInWithGoogle: () => Promise<void>
+  signInWithEmail: (email: string, password: string) => Promise<void>
+  signUpWithEmail: (email: string, password: string, displayName: string) => Promise<void>
   signOut: () => Promise<void>
   refreshUserDoc: () => Promise<void>
 }
@@ -90,6 +95,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const signInWithEmail = async (email: string, password: string) => {
+    if (!auth) throw new Error('Firebase가 초기화되지 않았습니다.')
+    await signInWithEmailAndPassword(auth, email, password)
+  }
+
+  const signUpWithEmail = async (email: string, password: string, displayName: string) => {
+    if (!auth) throw new Error('Firebase가 초기화되지 않았습니다.')
+    const { user: newUser } = await createUserWithEmailAndPassword(auth, email, password)
+    await updateProfile(newUser, { displayName })
+  }
+
   const signOut = async () => {
     if (!auth) return
     try {
@@ -104,7 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, userDoc, loading, signInWithGoogle, signOut, refreshUserDoc }}
+      value={{ user, userDoc, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, signOut, refreshUserDoc }}
     >
       {children}
     </AuthContext.Provider>
