@@ -92,17 +92,15 @@ function LoginContent() {
       className="min-h-screen flex items-center justify-center px-6 relative overflow-hidden"
       style={{ background: '#0d0820' }}
     >
-      <div className="glow-blob w-[500px] h-[500px] -top-48 left-1/2 -translate-x-1/2" style={{ background: 'rgba(79,110,247,0.15)' }} />
-      <div className="glow-blob w-64 h-64 bottom-0 right-0" style={{ background: 'rgba(124,58,237,0.12)' }} />
+      <div className="glow-blob w-[500px] h-[500px] -top-48 left-1/2 -translate-x-1/2" style={{ background: 'rgba(0,107,122,0.15)' }} />
+      <div className="glow-blob w-64 h-64 bottom-0 right-0" style={{ background: 'rgba(0,107,122,0.18)' }} />
 
       <div className="relative w-full max-w-md">
         {/* 로고 */}
         <div className="text-center mb-8">
-          <a href="/" className="inline-flex items-center gap-2.5 mb-6 hover:opacity-80 transition-opacity">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #4f6ef7, #7c3aed)' }}>
-              <span className="text-white font-bold">B</span>
-            </div>
-            <span className="text-white font-bold text-xl tracking-tight">BidMaster</span>
+          <a href="/" className="inline-flex mb-6 hover:opacity-80 transition-opacity">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-white.svg" alt="BidMaster" style={{ height: '38px', width: 'auto', display: 'block' }} />
           </a>
           <h1 className="text-2xl font-bold text-white mb-2">{isLoginMode ? '로그인' : '시작하기'}</h1>
           <p className="text-white/40 text-sm">
@@ -164,7 +162,7 @@ function LoginContent() {
                 onChange={e => setName(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl text-sm placeholder-white/25 transition-all"
                 style={inputStyle}
-                onFocus={e => { e.currentTarget.style.borderColor = 'rgba(79,110,247,0.6)' }}
+                onFocus={e => { e.currentTarget.style.borderColor = 'rgba(0,107,122,0.6)' }}
                 onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)' }}
               />
             )}
@@ -176,7 +174,7 @@ function LoginContent() {
               required
               className="w-full px-4 py-3 rounded-xl text-sm placeholder-white/25 transition-all"
               style={inputStyle}
-              onFocus={e => { e.currentTarget.style.borderColor = 'rgba(79,110,247,0.6)' }}
+              onFocus={e => { e.currentTarget.style.borderColor = 'rgba(0,107,122,0.6)' }}
               onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)' }}
             />
             <input
@@ -187,14 +185,14 @@ function LoginContent() {
               required
               className="w-full px-4 py-3 rounded-xl text-sm placeholder-white/25 transition-all"
               style={inputStyle}
-              onFocus={e => { e.currentTarget.style.borderColor = 'rgba(79,110,247,0.6)' }}
+              onFocus={e => { e.currentTarget.style.borderColor = 'rgba(0,107,122,0.6)' }}
               onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)' }}
             />
             <button
               type="submit"
               disabled={isSubmitting}
               className="w-full py-3.5 rounded-xl font-bold text-sm text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed mt-1"
-              style={{ background: 'linear-gradient(135deg, #4f6ef7, #7c3aed)' }}
+              style={{ background: '#006B7A' }}
             >
               {isSubmitting ? '처리 중...' : isLoginMode ? '이메일로 로그인' : '무료로 시작하기'}
             </button>

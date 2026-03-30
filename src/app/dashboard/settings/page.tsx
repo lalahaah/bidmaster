@@ -44,7 +44,7 @@ export default function SettingsPage() {
           <button
             onClick={() => setForm(p => ({ ...p, notifyEnabled: !p.notifyEnabled }))}
             className="relative w-12 h-6 rounded-full transition-all duration-300"
-            style={{ background: form.notifyEnabled ? '#4f6ef7' : 'rgba(255,255,255,0.15)' }}
+            style={{ background: form.notifyEnabled ? '#006B7A' : 'rgba(255,255,255,0.15)' }}
           >
             <span
               className="absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all duration-300"
@@ -76,7 +76,7 @@ export default function SettingsPage() {
               <label className="text-sm font-medium text-white/70">추천 점수 기준</label>
               <span
                 className="text-sm font-bold px-3 py-1 rounded-full"
-                style={{ background: 'rgba(79,110,247,0.15)', color: '#818cf8' }}
+                style={{ background: 'rgba(0,107,122,0.15)', color: '#006B7A' }}
               >
                 {form.scoreThreshold}점
               </span>
@@ -94,7 +94,7 @@ export default function SettingsPage() {
 
           <button onClick={handleSave} disabled={saving}
             className="w-full py-3.5 rounded-xl font-semibold text-sm text-white transition-all disabled:opacity-50"
-            style={{ background: 'linear-gradient(135deg, #4f6ef7, #7c3aed)', boxShadow: '0 0 24px rgba(79,110,247,0.3)' }}
+            style={{ background: 'linear-gradient(135deg, #006B7A, #006B7A)', boxShadow: '0 0 24px rgba(0,107,122,0.3)' }}
           >
             {saved ? '✓ 저장됨' : saving ? '저장 중...' : '설정 저장'}
           </button>
@@ -109,8 +109,8 @@ export default function SettingsPage() {
           <div className="grid grid-cols-3 gap-3">
             {[
               { plan: 'Free', limit: '일 3건', color: 'rgba(255,255,255,0.1)' },
-              { plan: 'Pro', limit: '무제한', color: 'rgba(79,110,247,0.2)' },
-              { plan: 'Enterprise', limit: '무제한+팀', color: 'rgba(124,58,237,0.2)' },
+              { plan: 'Pro', limit: '무제한', color: 'rgba(0,107,122,0.2)' },
+              { plan: 'Enterprise', limit: '무제한+팀', color: 'rgba(0,107,122,0.2)' },
             ].map(p => (
               <div key={p.plan} className="text-center py-3 rounded-xl" style={{ background: p.color }}>
                 <p className="text-white/60 text-xs font-medium">{p.plan}</p>

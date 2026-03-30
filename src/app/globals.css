@@ -2,12 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 레퍼런스(02SaaSSubscription) 라이트 테마 변수 */
+/* BidMaster 브랜드 컬러 — 다크 틸 단일 컬러 */
 :root {
   --bg: #fcfdfe;
   --bg-alt: #f4f7fa;
   --dark: #161c2d;
-  --primary: #473bf0;
+  --primary: #006B7A;
   --accent: #68D585;
   --border: #e7e9ed;
   --text-muted: #717182;
@@ -41,7 +41,7 @@ body {
 /* 스크롤바 */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #f4f7fa; }
-::-webkit-scrollbar-thumb { background: rgba(71,59,240,0.3); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: rgba(0,107,122,0.3); border-radius: 3px; }
 
 /* 로그인 페이지 전용 */
 .glow-blob {

@@ -130,7 +130,7 @@ export default function DemoPage() {
       {/* 데모 배너 */}
       <div
         className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-2 text-xs"
-        style={{ background: 'linear-gradient(90deg, #4f6ef7, #7c3aed)', color: 'white' }}
+        style={{ background: 'linear-gradient(90deg, #006B7A, #006B7A)', color: 'white' }}
       >
         <span className="font-medium">👀 데모 모드 — 샘플 데이터로 구성된 미리보기입니다</span>
         <Link
@@ -152,14 +152,9 @@ export default function DemoPage() {
       >
         {/* 로고 */}
         <div className="px-5 py-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-          <Link href="/" className="flex items-center gap-2.5">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-              style={{ background: 'linear-gradient(135deg, #4f6ef7, #7c3aed)' }}
-            >
-              <span className="text-white font-bold text-sm">B</span>
-            </div>
-            <span className="text-white font-bold tracking-tight">BidMaster</span>
+          <Link href="/" className="inline-flex hover:opacity-80 transition-opacity">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-white.svg" alt="BidMaster" style={{ height: '28px', width: 'auto', display: 'block' }} />
           </Link>
         </div>
 
@@ -170,9 +165,9 @@ export default function DemoPage() {
               key={item.label}
               className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium"
               style={item.active ? {
-                background: 'rgba(79,110,247,0.15)',
-                color: '#818cf8',
-                border: '1px solid rgba(79,110,247,0.2)',
+                background: 'rgba(0,107,122,0.15)',
+                color: '#006B7A',
+                border: '1px solid rgba(0,107,122,0.2)',
               } : {
                 color: 'rgba(255,255,255,0.35)',
                 border: '1px solid transparent',
@@ -192,7 +187,7 @@ export default function DemoPage() {
           >
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-              style={{ background: 'linear-gradient(135deg, #4f6ef7, #7c3aed)' }}
+              style={{ background: '#006B7A' }}
             >
               데
             </div>
@@ -204,7 +199,7 @@ export default function DemoPage() {
           <Link
             href="/login"
             className="w-full text-center block text-xs font-bold py-2 rounded-lg transition-all"
-            style={{ background: 'linear-gradient(135deg, #4f6ef7, #7c3aed)', color: 'white' }}
+            style={{ background: 'linear-gradient(135deg, #006B7A, #006B7A)', color: 'white' }}
           >
             실제로 시작하기
           </Link>
@@ -248,8 +243,8 @@ export default function DemoPage() {
         <div
           className="mb-6 p-4 rounded-xl flex items-center justify-between"
           style={{
-            background: 'linear-gradient(135deg, rgba(79,110,247,0.12), rgba(124,58,237,0.08))',
-            border: '1px solid rgba(79,110,247,0.25)',
+            background: 'linear-gradient(135deg, rgba(0,107,122,0.12), rgba(0,107,122,0.08))',
+            border: '1px solid rgba(0,107,122,0.25)',
           }}
         >
           <div>
@@ -259,7 +254,7 @@ export default function DemoPage() {
           <Link
             href="/login"
             className="px-4 py-2 rounded-lg text-sm font-semibold text-white shrink-0 ml-4"
-            style={{ background: 'linear-gradient(135deg, #4f6ef7, #7c3aed)' }}
+            style={{ background: '#006B7A' }}
           >
             업그레이드
           </Link>
@@ -273,7 +268,7 @@ export default function DemoPage() {
               onClick={() => setFilter(f)}
               className="px-4 py-1.5 rounded-full text-xs font-bold transition-all"
               style={filter === f
-                ? { background: 'rgba(79,110,247,0.2)', color: '#818cf8', border: '1px solid rgba(79,110,247,0.3)' }
+                ? { background: 'rgba(0,107,122,0.2)', color: '#006B7A', border: '1px solid rgba(0,107,122,0.3)' }
                 : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.35)', border: '1px solid rgba(255,255,255,0.07)' }
               }
             >
@@ -294,7 +289,7 @@ export default function DemoPage() {
             <span className="text-white font-semibold text-sm">추천 공고 리스트</span>
             <span
               className="text-xs px-3 py-1 rounded-full"
-              style={{ background: 'rgba(79,110,247,0.15)', color: '#818cf8' }}
+              style={{ background: 'rgba(0,107,122,0.15)', color: '#006B7A' }}
             >
               {filtered.length}건
             </span>
@@ -328,7 +323,7 @@ export default function DemoPage() {
                 </div>
                 <div
                   className="text-2xl font-bold shrink-0"
-                  style={{ color: notice.matchScore >= 70 ? '#818cf8' : 'rgba(255,255,255,0.2)' }}
+                  style={{ color: notice.matchScore >= 70 ? '#006B7A' : 'rgba(255,255,255,0.2)' }}
                 >
                   {notice.matchScore}
                 </div>
@@ -386,13 +381,13 @@ function DemoSlideOver({ notice, onClose }: { notice: Notice; onClose: () => voi
           <div
             className="rounded-2xl p-5 space-y-4"
             style={{
-              background: 'linear-gradient(135deg, rgba(79,110,247,0.1), rgba(124,58,237,0.07))',
-              border: '1px solid rgba(79,110,247,0.2)',
+              background: 'linear-gradient(135deg, rgba(0,107,122,0.1), rgba(0,107,122,0.07))',
+              border: '1px solid rgba(0,107,122,0.2)',
             }}
           >
             <div className="flex items-center justify-between">
               <span className="text-white/70 text-sm font-medium">AI 분석 결과</span>
-              <span className="text-3xl font-bold" style={{ color: '#818cf8' }}>{notice.matchScore}점</span>
+              <span className="text-3xl font-bold" style={{ color: '#006B7A' }}>{notice.matchScore}점</span>
             </div>
             <p className="text-white font-medium text-sm">{notice.oneLiner}</p>
             <div className="space-y-2.5 text-sm text-white/50">
@@ -405,7 +400,7 @@ function DemoSlideOver({ notice, onClose }: { notice: Notice; onClose: () => voi
           <Link
             href="/login"
             className="block w-full text-center py-3.5 rounded-xl text-sm font-bold text-white transition-all"
-            style={{ background: 'linear-gradient(135deg, #4f6ef7, #7c3aed)' }}
+            style={{ background: '#006B7A' }}
           >
             지금 가입하고 실제 공고 보기 →
           </Link>

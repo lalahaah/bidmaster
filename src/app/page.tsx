@@ -2,10 +2,19 @@
 
 import Link from 'next/link'
 
-// ── 레퍼런스 컬러 팔레트 (02SaaSSubscription.tsx 기준) ────────
+// ── BidMaster 브랜드 컬러 ───────────────────────────────────
 // bg: #fcfdfe  |  section-alt: #f4f7fa  |  dark: #161c2d
-// primary: #473bf0  |  accent-green: #68D585
-// card: white / border #e7e9ed  |  tag badge: #473bf0 @ 10% opacity
+// primary: #006B7A (dark teal, 단일 브랜드 컬러)
+// accent-green: #68D585  |  card: white / border #e7e9ed
+
+/* ─── 공유 로고 컴포넌트 — SVG 파일 사용 ─── */
+function BidMasterLogo({ height = 36, darkBg = false }: { height?: number; darkBg?: boolean }) {
+  const src = darkBg ? '/logo-white.svg' : '/logo.svg'
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt="BidMaster" style={{ height: `${height}px`, width: 'auto', display: 'block' }} />
+  )
+}
 
 export default function LandingPage() {
   return (
@@ -31,20 +40,13 @@ function Nav() {
     <header className="w-full px-8 py-5" style={{ borderBottom: '1px solid #e7e9ed' }}>
       <div className="max-w-6xl mx-auto flex items-center justify-between">
         {/* 로고 */}
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: '#473bf0' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="white" />
-            </svg>
-          </div>
-          <span style={{ fontWeight: 800, fontSize: '20px', color: '#161c2d', letterSpacing: '-0.5px' }}>BidMaster</span>
-        </div>
+        <BidMasterLogo height={36} />
 
         {/* 중앙 링크 */}
         <nav className="hidden md:flex items-center gap-10">
           {[['#features','기능'],['#how','이용방법'],['#pricing','요금제'],['#faq','FAQ']].map(([href, label]) => (
             <a key={label} href={href}
-              className="hover:text-[#473bf0] transition-colors"
+              className="hover:text-[#006B7A] transition-colors"
               style={{ fontSize: '15px', fontWeight: 700, color: '#161c2d', letterSpacing: '-0.1px' }}>{label}</a>
           ))}
         </nav>
@@ -52,13 +54,13 @@ function Nav() {
         {/* CTA */}
         <div className="hidden md:flex items-center gap-3">
           <Link href="/login?mode=login"
-            className="font-bold rounded-lg px-4 py-2.5 transition-colors hover:text-[#473bf0]"
+            className="font-bold rounded-lg px-4 py-2.5 transition-colors hover:text-[#006B7A]"
             style={{ fontSize: '15px', color: '#161c2d', letterSpacing: '-0.3px' }}>
             로그인
           </Link>
           <Link href="/login"
             className="inline-flex items-center justify-center text-white font-bold rounded-lg px-5 py-2.5 transition-opacity hover:opacity-90"
-            style={{ background: '#473bf0', fontSize: '15px', letterSpacing: '-0.5px' }}>
+            style={{ background: '#006B7A', fontSize: '15px', letterSpacing: '-0.5px' }}>
             무료 체험 시작
           </Link>
         </div>
@@ -83,7 +85,7 @@ function Hero() {
         <div className="flex items-center justify-center gap-4 flex-wrap">
           <Link href="/login"
             className="inline-flex items-center gap-2 text-white font-bold rounded-lg px-6 py-3.5 transition-opacity hover:opacity-90"
-            style={{ background: '#473bf0', fontSize: '17px', letterSpacing: '-0.6px' }}>
+            style={{ background: '#006B7A', fontSize: '17px', letterSpacing: '-0.6px' }}>
             무료 체험 시작하기
             <ArrowRight color="white" />
           </Link>
@@ -130,10 +132,11 @@ function BrowserMockup() {
       <div className="flex" style={{ minHeight: '380px' }}>
         {/* 사이드바 */}
         <div className="w-44 shrink-0 p-4" style={{ background: '#161c2d', borderRight: '1px solid #1e2535' }}>
-          <div className="font-bold text-sm mb-6" style={{ color: 'rgba(255,255,255,0.9)' }}>BidMaster</div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-white.svg" alt="BidMaster" className="mb-5" style={{ height: '18px', width: 'auto' }} />
           {[{ l: '대시보드', a: true }, { l: '공고 목록' }, { l: 'AI 분석' }, { l: '알림 설정' }, { l: '프로필' }].map(m => (
             <div key={m.l} className="px-2 py-2 rounded-lg mb-1"
-              style={{ background: m.a ? '#473bf0' : 'transparent', color: m.a ? 'white' : 'rgba(255,255,255,0.4)', fontSize: '12px', fontWeight: m.a ? 700 : 400, cursor: 'default' }}>
+              style={{ background: m.a ? '#006B7A' : 'transparent', color: m.a ? 'white' : 'rgba(255,255,255,0.4)', fontSize: '12px', fontWeight: m.a ? 700 : 400, cursor: 'default' }}>
               {m.l}
             </div>
           ))}
@@ -143,7 +146,7 @@ function BrowserMockup() {
         <div className="flex-1 p-5" style={{ background: '#f8fafc' }}>
           <div className="flex items-center justify-between mb-4">
             <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#161c2d' }}>AI 추천 공고</h3>
-            <span style={{ fontSize: '11px', color: '#473bf0', fontWeight: 700, background: 'rgba(71,59,240,0.08)', padding: '3px 10px', borderRadius: '12px' }}>오늘 247건 수집</span>
+            <span style={{ fontSize: '11px', color: '#006B7A', fontWeight: 700, background: 'rgba(0,107,122,0.08)', padding: '3px 10px', borderRadius: '12px' }}>오늘 247건 수집</span>
           </div>
           {/* KPI 카드 */}
           <div className="grid grid-cols-4 gap-3 mb-4">
@@ -172,7 +175,7 @@ function BrowserMockup() {
                     background: n.status === '가능' ? 'rgba(104,213,133,0.15)' : 'rgba(250,204,21,0.15)',
                     color: n.status === '가능' ? '#15803d' : '#92400e' }}>{n.status}</span>
                 </span>
-                <span style={{ flex: 1, fontSize: '15px', fontWeight: 800, color: n.score >= 85 ? '#473bf0' : '#94a3b8' }}>{n.score}</span>
+                <span style={{ flex: 1, fontSize: '15px', fontWeight: 800, color: n.score >= 85 ? '#006B7A' : '#94a3b8' }}>{n.score}</span>
               </div>
             ))}
           </div>
@@ -262,7 +265,7 @@ function ContentSection1() {
           </p>
           <Link href="/login"
             className="inline-flex items-center gap-2 text-white font-bold rounded-lg px-6 py-3.5 transition-opacity hover:opacity-90"
-            style={{ background: '#473bf0', fontSize: '17px', letterSpacing: '-0.6px' }}>
+            style={{ background: '#006B7A', fontSize: '17px', letterSpacing: '-0.6px' }}>
             무료 체험 시작하기
             <ArrowRight color="white" />
           </Link>
@@ -276,7 +279,7 @@ function ContentSection1() {
             <div className="p-4 flex items-center justify-between"
               style={{ background: '#f8fafc', borderBottom: '1px solid #e7e9ed' }}>
               <span style={{ fontSize: '13px', fontWeight: 700, color: '#161c2d' }}>AI 분석 리포트</span>
-              <span style={{ fontSize: '11px', color: '#473bf0', fontWeight: 700, background: 'rgba(71,59,240,0.1)', padding: '3px 10px', borderRadius: '12px' }}>92점</span>
+              <span style={{ fontSize: '11px', color: '#006B7A', fontWeight: 700, background: 'rgba(0,107,122,0.1)', padding: '3px 10px', borderRadius: '12px' }}>92점</span>
             </div>
             <div className="p-6">
               {[
@@ -287,7 +290,7 @@ function ContentSection1() {
                 { label: '한줄 요약', value: '참가 강력 추천 — 조건 완전 부합' },
               ].map(r => (
                 <div key={r.label} className="flex gap-3 py-2.5" style={{ borderBottom: '1px solid #f1f3f5' }}>
-                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#473bf0', width: '72px', flexShrink: 0 }}>{r.label}</span>
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#006B7A', width: '72px', flexShrink: 0 }}>{r.label}</span>
                   <span style={{ fontSize: '12px', color: '#161c2d', opacity: 0.7 }}>{r.value}</span>
                 </div>
               ))}
@@ -341,7 +344,7 @@ function ContentSection2() {
               <div className="p-5" style={{ background: '#f8fafc', borderBottom: '1px solid #e7e9ed' }}>
                 <p style={{ fontSize: '12px', fontWeight: 700, color: '#717182', marginBottom: '12px' }}>발주기관 분포</p>
                 {[
-                  { name: '중앙부처', pct: 38, color: '#473bf0' },
+                  { name: '중앙부처', pct: 38, color: '#006B7A' },
                   { name: '지방자치단체', pct: 29, color: '#68D585' },
                   { name: '공공기관', pct: 22, color: '#f59e0b' },
                   { name: '교육기관', pct: 11, color: '#ef4444' },
@@ -368,7 +371,7 @@ function ContentSection2() {
                   <div key={item.t} className="flex items-center gap-3 py-2.5"
                     style={{ borderBottom: i < 2 ? '1px solid #f1f3f5' : 'none' }}>
                     <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
-                      style={{ background: 'rgba(71,59,240,0.1)', fontSize: '10px', fontWeight: 800, color: '#473bf0' }}>
+                      style={{ background: 'rgba(0,107,122,0.1)', fontSize: '10px', fontWeight: 800, color: '#006B7A' }}>
                       {item.s}
                     </div>
                     <span style={{ fontSize: '12px', color: '#161c2d', flex: 1 }}>{item.t}</span>
@@ -385,8 +388,8 @@ function ContentSection2() {
             {steps.map(s => (
               <div key={s.num} className="flex gap-5 mb-8">
                 <div className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ background: 'rgba(71,59,240,0.1)' }}>
-                  <span style={{ fontSize: '17px', fontWeight: 700, color: '#473bf0' }}>{s.num}</span>
+                  style={{ background: 'rgba(0,107,122,0.1)' }}>
+                  <span style={{ fontSize: '17px', fontWeight: 700, color: '#006B7A' }}>{s.num}</span>
                 </div>
                 <div>
                   <h4 style={{ fontSize: '21px', fontWeight: 800, color: '#161c2d', letterSpacing: '-0.5px', marginBottom: '6px' }}>{s.title}</h4>
@@ -428,7 +431,7 @@ function Testimonials() {
             <div key={t.name} className="p-10 text-center">
               {/* 아바타 */}
               <div className="w-16 h-16 rounded-full mx-auto mb-5 flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #473bf0, #68D585)', fontSize: '24px', fontWeight: 800, color: 'white' }}>
+                style={{ background: 'linear-gradient(135deg, #006B7A, #006B7A)', fontSize: '24px', fontWeight: 800, color: 'white' }}>
                 {t.initials}
               </div>
               <h3 style={{ fontSize: '24px', fontWeight: 800, color: '#161c2d', letterSpacing: '-0.5px', lineHeight: '34px', marginBottom: '14px' }}>
@@ -449,70 +452,142 @@ function Testimonials() {
 
 /* ─── PRICING (레퍼런스: bg #161c2d, 흰 카드 3개) ────────────── */
 function Pricing() {
-  const plans = [
-    {
-      tag: 'Basic',
-      price: '49,000',
-      sub: '월 구독',
-      desc: '일 50건 공고 분석, 기본 AI 리포트, 카카오 알림 일 3건. 소규모 입찰 담당자에게 딱 맞습니다.',
-    },
-    {
-      tag: 'Pro',
-      price: '129,000',
-      sub: '월 구독',
-      desc: '무제한 공고 분석, 심층 AI 리포트, 카카오 알림 무제한, 낙찰 확률 예측 포함. 가장 인기 있는 플랜.',
-    },
-    {
-      tag: 'Enterprise',
-      price: '문의',
-      sub: '맞춤 견적',
-      desc: '팀 계정, 전담 CS, API 연동 지원. 대규모 조달 팀을 위한 커스텀 플랜입니다.',
-    },
-  ]
   return (
     <section id="pricing" className="py-24 px-6" style={{ background: '#161c2d' }}>
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-14">
-          <h2 style={{ fontSize: '36px', fontWeight: 800, color: 'white', letterSpacing: '-1.2px', lineHeight: '48px' }}>
-            요금제 &amp; 플랜
+
+        {/* 섹션 헤더 */}
+        <div className="text-center mb-16">
+          <span style={{
+            fontSize: '12px', fontWeight: 800, color: '#006B7A',
+            letterSpacing: '2px', textTransform: 'uppercase', display: 'block', marginBottom: '16px',
+          }}>요금 안내</span>
+          <h2 style={{ fontSize: '36px', fontWeight: 800, color: 'white', letterSpacing: '-1.2px', lineHeight: '48px', marginBottom: '16px' }}>
+            낙찰을 만드는 가장 저렴한 투자
           </h2>
-          <p style={{ fontSize: '19px', color: 'white', opacity: 0.65, lineHeight: '32px', letterSpacing: '-0.2px', marginTop: '12px' }}>
-            14일 무료 체험으로 시작하고, 필요할 때 업그레이드 하세요.
+          <p style={{ fontSize: '19px', color: 'white', opacity: 0.55, lineHeight: '32px', letterSpacing: '-0.2px', maxWidth: '520px', margin: '0 auto' }}>
+            입찰 공고 하나 분석하는 데 들이는 인건비는 얼마인가요?<br />
+            월 29,000원으로 AI 비서에게 맡기세요.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
-          {plans.map(p => (
-            <div key={p.tag} className="rounded-xl overflow-hidden"
-              style={{ background: 'white', border: '1px solid #e7e9ed' }}>
-              <div className="p-8">
-                {/* 태그 - 레퍼런스 TagText 컴포넌트 스타일 그대로 */}
-                <div className="inline-block mb-6">
-                  <span style={{
-                    background: 'rgba(71,59,240,0.1)',
-                    color: '#473bf0',
-                    fontSize: '13px',
-                    fontWeight: 800,
-                    letterSpacing: '1.625px',
-                    padding: '4px 14px',
-                    borderRadius: '14px',
-                    textTransform: 'uppercase',
-                  }}>{p.tag}</span>
-                </div>
-                {/* 가격 */}
-                <div style={{ fontSize: '48px', fontWeight: 800, color: '#161c2d', letterSpacing: '-1.8px', lineHeight: '58px', marginBottom: '4px' }}>
-                  {p.price === '문의' ? '문의' : `₩${p.price}`}
-                </div>
-                <p style={{ fontSize: '17px', color: '#161c2d', opacity: 0.7, letterSpacing: '-0.2px', marginBottom: '20px' }}>{p.sub}</p>
-                <p style={{ fontSize: '17px', color: '#161c2d', opacity: 0.7, lineHeight: '29px', letterSpacing: '-0.2px', marginBottom: '32px' }}>{p.desc}</p>
-                {/* CTA 버튼 - 레퍼런스 ButtonText1 스타일 */}
-                <button className="w-full py-3.5 text-white font-bold rounded-lg transition-opacity hover:opacity-90"
-                  style={{ background: '#473bf0', fontSize: '17px', letterSpacing: '-0.6px' }}>
-                  {p.price === '문의' ? '문의하기' : '무료 체험 시작'}
-                </button>
-              </div>
+        {/* 카드 그리드 */}
+        <div className="grid md:grid-cols-3 gap-6 items-stretch">
+
+          {/* ── Starter (Free) ── */}
+          <div className="rounded-xl p-8 flex flex-col" style={{ background: 'white', border: '1px solid #e7e9ed' }}>
+            <div className="mb-6">
+              <h3 style={{ fontSize: '21px', fontWeight: 800, color: '#161c2d', letterSpacing: '-0.5px', marginBottom: '6px' }}>Starter</h3>
+              <p style={{ fontSize: '15px', color: '#717182', letterSpacing: '-0.1px' }}>가끔 입찰에 참여하는 기업</p>
             </div>
-          ))}
+            <div className="mb-8">
+              {/* Pro/Enterprise의 취소선 행과 높이 맞춤 */}
+              <div style={{ height: '29px', marginBottom: '4px' }} />
+              <span style={{ fontSize: '48px', fontWeight: 800, color: '#161c2d', letterSpacing: '-1.8px', lineHeight: '58px' }}>Free</span>
+              <span style={{ fontSize: '17px', color: '#717182', letterSpacing: '-0.2px', marginLeft: '6px' }}>/ 평생</span>
+            </div>
+            <ul className="flex-1 mb-8" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {[
+                { ok: true,  text: '기본 공고 검색' },
+                { ok: true,  text: '관심 공고 스크랩 (최대 10개)' },
+                { ok: false, text: 'AI 10초 요약 리포트' },
+                { ok: false, text: 'AI 낙찰 확률 예측' },
+              ].map(item => (
+                <li key={item.text} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '15px',
+                  color: item.ok ? '#161c2d' : '#717182', letterSpacing: '-0.1px' }}>
+                  {item.ok
+                    ? <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="9" fill="#68D585"/><path d="M5 9l3 3 5-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    : <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="9" fill="#e7e9ed"/><path d="M6 6l6 6M12 6l-6 6" stroke="#717182" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                  }
+                  {item.text}
+                </li>
+              ))}
+            </ul>
+            <button className="w-full font-bold rounded-lg py-3.5 transition-colors hover:bg-gray-50"
+              style={{ fontSize: '17px', letterSpacing: '-0.6px', color: '#161c2d', border: '1.5px solid #e7e9ed' }}>
+              무료로 시작하기
+            </button>
+          </div>
+
+          {/* ── Professional (Featured, 위로 올림) ── */}
+          <div className="rounded-xl p-8 flex flex-col relative md:-mt-5 md:mb-[-20px]"
+            style={{ background: '#0d1a26', border: '2px solid #006B7A', boxShadow: '0 24px 48px rgba(0,107,122,0.25)' }}>
+            {/* 배지 */}
+            <div style={{
+              position: 'absolute', top: 0, left: '50%', transform: 'translate(-50%, -50%)',
+              background: '#006B7A', color: 'white', padding: '5px 14px', borderRadius: '99px',
+              fontSize: '12px', fontWeight: 800, letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '5px',
+              whiteSpace: 'nowrap', boxShadow: '0 4px 12px rgba(0,107,122,0.4)',
+            }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              런칭 기념 특가 (선착순 100명)
+            </div>
+            <div className="mb-6">
+              <h3 style={{ fontSize: '21px', fontWeight: 800, color: 'white', letterSpacing: '-0.5px', marginBottom: '6px' }}>Professional</h3>
+              <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.5)', letterSpacing: '-0.1px' }}>적극적으로 낙찰을 노리는 기업</p>
+            </div>
+            <div className="mb-8">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <span style={{ fontSize: '19px', color: 'rgba(255,255,255,0.3)', textDecoration: 'line-through', letterSpacing: '-0.5px' }}>₩49,000</span>
+                <span style={{
+                  background: 'rgba(0,107,122,0.35)', color: '#5BBCCA',
+                  fontSize: '12px', fontWeight: 800, padding: '2px 9px', borderRadius: '99px',
+                }}>40% 할인</span>
+              </div>
+              <span style={{ fontSize: '48px', fontWeight: 800, color: 'white', letterSpacing: '-1.8px', lineHeight: '58px' }}>₩29,000</span>
+              <span style={{ fontSize: '17px', color: 'rgba(255,255,255,0.4)', letterSpacing: '-0.2px', marginLeft: '6px' }}>/ 월</span>
+            </div>
+            <ul className="flex-1 mb-8" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {[
+                '실시간 맞춤 키워드 알림',
+                'AI 10초 요약 리포트 (무제한)',
+                'AI 낙찰 확률 분석 엔진',
+                '적격심사 점수 자동 계산기',
+              ].map(text => (
+                <li key={text} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '15px', color: 'white', letterSpacing: '-0.1px' }}>
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="9" fill="rgba(0,107,122,0.5)"/><path d="M5 9l3 3 5-5" stroke="#5BBCCA" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  {text}
+                </li>
+              ))}
+            </ul>
+            <button className="w-full text-white font-bold rounded-lg py-3.5 transition-opacity hover:opacity-90"
+              style={{ fontSize: '17px', letterSpacing: '-0.6px', background: '#006B7A', boxShadow: '0 4px 16px rgba(0,107,122,0.4)' }}>
+              지금 혜택가로 구독하기
+            </button>
+          </div>
+
+          {/* ── Enterprise ── */}
+          <div className="rounded-xl p-8 flex flex-col" style={{ background: 'white', border: '1px solid #e7e9ed' }}>
+            <div className="mb-6">
+              <h3 style={{ fontSize: '21px', fontWeight: 800, color: '#161c2d', letterSpacing: '-0.5px', marginBottom: '6px' }}>Enterprise</h3>
+              <p style={{ fontSize: '15px', color: '#717182', letterSpacing: '-0.1px' }}>입찰 전담팀이 있는 중견 기업</p>
+            </div>
+            <div className="mb-8">
+              <div style={{ marginBottom: '4px' }}>
+                <span style={{ fontSize: '19px', color: '#717182', textDecoration: 'line-through', letterSpacing: '-0.5px' }}>₩129,000</span>
+              </div>
+              <span style={{ fontSize: '48px', fontWeight: 800, color: '#161c2d', letterSpacing: '-1.8px', lineHeight: '58px' }}>₩99,000</span>
+              <span style={{ fontSize: '17px', color: '#717182', letterSpacing: '-0.2px', marginLeft: '6px' }}>/ 월</span>
+            </div>
+            <ul className="flex-1 mb-8" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {[
+                'Professional의 모든 기능',
+                '경쟁사 낙찰·투찰 동향 분석',
+                '다중 계정 지원 (팀원 5명)',
+                '1:1 입찰 컨설턴트 매칭 우선권',
+              ].map(text => (
+                <li key={text} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '15px', color: '#161c2d', letterSpacing: '-0.1px' }}>
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="9" fill="#68D585"/><path d="M5 9l3 3 5-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  {text}
+                </li>
+              ))}
+            </ul>
+            <button className="w-full font-bold rounded-lg py-3.5 transition-colors hover:bg-gray-50"
+              style={{ fontSize: '17px', letterSpacing: '-0.6px', color: '#161c2d', border: '1.5px solid #e7e9ed' }}>
+              도입 문의하기
+            </button>
+          </div>
+
         </div>
       </div>
     </section>
@@ -593,14 +668,14 @@ function CTABanner() {
           {/* 레퍼런스 "Learn more" 버튼 (outline style) */}
           <a href="#features"
             className="inline-flex items-center gap-2 font-bold rounded-lg px-6 py-3.5 transition-colors hover:bg-gray-50"
-            style={{ fontSize: '17px', letterSpacing: '-0.6px', color: '#473bf0', border: '1px solid rgba(71,59,240,0.25)' }}>
+            style={{ fontSize: '17px', letterSpacing: '-0.6px', color: '#006B7A', border: '1px solid rgba(0,107,122,0.25)' }}>
             기능 알아보기
-            <ArrowRight color="#473bf0" />
+            <ArrowRight color="#006B7A" />
           </a>
           {/* 레퍼런스 "Get it now" 버튼 (solid blue) */}
           <Link href="/login"
             className="inline-flex items-center gap-2 text-white font-bold rounded-lg px-6 py-3.5 transition-opacity hover:opacity-90"
-            style={{ background: '#473bf0', fontSize: '17px', letterSpacing: '-0.6px' }}>
+            style={{ background: '#006B7A', fontSize: '17px', letterSpacing: '-0.6px' }}>
             지금 시작하기
             <ArrowRight color="white" />
           </Link>
@@ -618,13 +693,8 @@ function Footer() {
         <div className="grid md:grid-cols-5 gap-10">
           {/* 왼쪽 영역 (레퍼런스 "0" 영역) */}
           <div className="md:col-span-2">
-            <div className="flex items-center gap-2.5 mb-4">
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: '#473bf0' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="white" />
-                </svg>
-              </div>
-              <span style={{ fontWeight: 800, fontSize: '18px', color: '#161c2d' }}>BidMaster</span>
+            <div className="mb-4">
+              <BidMasterLogo height={28} />
             </div>
             <p style={{ fontSize: '15px', color: '#161c2d', opacity: 0.7, lineHeight: '26px', letterSpacing: '-0.1px', marginBottom: '20px' }}>
               나라장터 입찰 공고를 AI가 자동 분석하여 우리 회사에 맞는 공고만 카카오톡으로 알려주는 SaaS 서비스입니다.
@@ -655,7 +725,7 @@ function Footer() {
               <ul className="space-y-3">
                 {col.links.map(l => (
                   <li key={l}>
-                    <a href="#" className="hover:text-[#473bf0] transition-colors"
+                    <a href="#" className="hover:text-[#006B7A] transition-colors"
                       style={{ fontSize: '17px', color: '#161c2d', letterSpacing: '-0.2px' }}>{l}</a>
                   </li>
                 ))}

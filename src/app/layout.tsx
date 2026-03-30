@@ -19,6 +19,10 @@ export const metadata: Metadata = {
     description: '놓치는 공고 없이, 이기는 입찰만',
     type: 'website',
   },
+  icons: {
+    icon: '/icon.svg',
+    shortcut: '/icon.svg',
+  },
 }
 
 export default function RootLayout({

@@ -49,14 +49,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       >
         {/* 로고 */}
         <div className="px-5 py-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-          <Link href="/" className="flex items-center gap-2.5">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-              style={{ background: 'linear-gradient(135deg, #4f6ef7, #7c3aed)' }}
-            >
-              <span className="text-white font-bold text-sm">B</span>
-            </div>
-            <span className="text-white font-bold tracking-tight">BidMaster</span>
+          <Link href="/" className="inline-flex hover:opacity-80 transition-opacity">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-white.svg" alt="BidMaster" style={{ height: '30px', width: 'auto', display: 'block' }} />
           </Link>
         </div>
 
@@ -70,9 +65,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 href={item.href}
                 className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
                 style={active ? {
-                  background: 'rgba(79,110,247,0.15)',
-                  color: '#818cf8',
-                  border: '1px solid rgba(79,110,247,0.2)',
+                  background: 'rgba(0,107,122,0.25)',
+                  color: '#5BBCCA',
+                  border: '1px solid rgba(0,107,122,0.4)',
                 } : {
                   color: 'rgba(255,255,255,0.45)',
                   border: '1px solid transparent',
@@ -103,7 +98,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             ) : (
               <div
                 className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-                style={{ background: 'linear-gradient(135deg, #4f6ef7, #7c3aed)' }}
+                style={{ background: '#006B7A' }}
               >
                 {user.displayName?.[0] ?? 'U'}
               </div>

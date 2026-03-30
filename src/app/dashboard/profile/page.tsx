@@ -60,7 +60,7 @@ export default function ProfilePage() {
             />
             <button onClick={() => addTag('bizCodes', bizInput, setBizInput)}
               className="px-4 py-2.5 rounded-xl text-sm font-medium text-white transition-all"
-              style={{ background: 'linear-gradient(135deg, #4f6ef7, #7c3aed)' }}>
+              style={{ background: 'linear-gradient(135deg, #006B7A, #006B7A)' }}>
               추가
             </button>
           </div>
@@ -79,7 +79,7 @@ export default function ProfilePage() {
             />
             <button onClick={() => addTag('licenses', licInput, setLicInput)}
               className="px-4 py-2.5 rounded-xl text-sm font-medium text-white transition-all"
-              style={{ background: 'linear-gradient(135deg, #4f6ef7, #7c3aed)' }}>
+              style={{ background: 'linear-gradient(135deg, #006B7A, #006B7A)' }}>
               추가
             </button>
           </div>
@@ -117,7 +117,7 @@ export default function ProfilePage() {
 
         <button onClick={handleSave} disabled={saving}
           className="w-full py-3.5 rounded-xl font-semibold text-sm text-white transition-all disabled:opacity-50"
-          style={{ background: 'linear-gradient(135deg, #4f6ef7, #7c3aed)', boxShadow: '0 0 24px rgba(79,110,247,0.3)' }}
+          style={{ background: 'linear-gradient(135deg, #006B7A, #006B7A)', boxShadow: '0 0 24px rgba(0,107,122,0.3)' }}
         >
           {saved ? '✓ 저장됨' : saving ? '저장 중...' : '프로필 저장'}
         </button>
@@ -144,7 +144,7 @@ function TagList({ tags, onRemove }: { tags: string[]; onRemove: (v: string) => 
     <div className="flex flex-wrap gap-2 mt-2">
       {tags.map(tag => (
         <span key={tag} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium"
-          style={{ background: 'rgba(79,110,247,0.15)', color: '#818cf8', border: '1px solid rgba(79,110,247,0.25)' }}>
+          style={{ background: 'rgba(0,107,122,0.15)', color: '#006B7A', border: '1px solid rgba(0,107,122,0.25)' }}>
           {tag}
           <button onClick={() => onRemove(tag)} className="opacity-50 hover:opacity-100 transition-opacity leading-none">×</button>
         </span>

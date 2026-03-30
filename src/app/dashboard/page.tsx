@@ -80,7 +80,7 @@ export default function DashboardPage() {
             onClick={handleAnalyze}
             disabled={isAnalyzing || unanalyzedCount === 0}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{ background: 'linear-gradient(135deg, #4f6ef7, #7c3aed)' }}
+            style={{ background: 'linear-gradient(135deg, #006B7A, #006B7A)' }}
           >
             {isAnalyzing ? (
               <><div className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white animate-spin" /> 분석 중...</>
@@ -104,10 +104,10 @@ export default function DashboardPage() {
             className="rounded-2xl p-5"
             style={{
               background: k.highlight && possible > 0
-                ? 'linear-gradient(135deg, rgba(79,110,247,0.12), rgba(124,58,237,0.08))'
+                ? 'linear-gradient(135deg, rgba(0,107,122,0.12), rgba(0,107,122,0.08))'
                 : 'rgba(255,255,255,0.04)',
               border: k.highlight && possible > 0
-                ? '1px solid rgba(79,110,247,0.25)'
+                ? '1px solid rgba(0,107,122,0.25)'
                 : '1px solid rgba(255,255,255,0.08)',
             }}
           >
@@ -125,8 +125,8 @@ export default function DashboardPage() {
         <div
           className="mb-6 p-4 rounded-xl flex items-center justify-between"
           style={{
-            background: 'linear-gradient(135deg, rgba(79,110,247,0.12), rgba(124,58,237,0.08))',
-            border: '1px solid rgba(79,110,247,0.25)',
+            background: 'linear-gradient(135deg, rgba(0,107,122,0.12), rgba(0,107,122,0.08))',
+            border: '1px solid rgba(0,107,122,0.25)',
           }}
         >
           <div>
@@ -135,7 +135,7 @@ export default function DashboardPage() {
           </div>
           <button
             className="px-4 py-2 rounded-lg text-sm font-semibold text-white shrink-0 ml-4"
-            style={{ background: 'linear-gradient(135deg, #4f6ef7, #7c3aed)' }}
+            style={{ background: 'linear-gradient(135deg, #006B7A, #006B7A)' }}
           >
             업그레이드
           </button>
@@ -158,7 +158,7 @@ export default function DashboardPage() {
                 미분석 {unanalyzedCount}건
               </span>
             )}
-            <span className="text-xs px-3 py-1 rounded-full" style={{ background: 'rgba(79,110,247,0.15)', color: '#818cf8' }}>
+            <span className="text-xs px-3 py-1 rounded-full" style={{ background: 'rgba(0,107,122,0.15)', color: '#006B7A' }}>
               전체 {notices.length}건
             </span>
           </div>
@@ -209,7 +209,7 @@ export default function DashboardPage() {
                   {notice.aiSummary && (
                     <div
                       className="text-2xl font-bold shrink-0"
-                      style={{ color: notice.aiSummary.score >= 70 ? '#818cf8' : 'rgba(255,255,255,0.2)' }}
+                      style={{ color: notice.aiSummary.score >= 70 ? '#006B7A' : 'rgba(255,255,255,0.2)' }}
                     >
                       {notice.aiSummary.score}
                     </div>
@@ -262,13 +262,13 @@ function SlideOver({ notice, onClose }: { notice: BidNotice; onClose: () => void
             <div
               className="rounded-2xl p-5 space-y-4"
               style={{
-                background: 'linear-gradient(135deg, rgba(79,110,247,0.1), rgba(124,58,237,0.07))',
-                border: '1px solid rgba(79,110,247,0.2)',
+                background: 'linear-gradient(135deg, rgba(0,107,122,0.1), rgba(0,107,122,0.07))',
+                border: '1px solid rgba(0,107,122,0.2)',
               }}
             >
               <div className="flex items-center justify-between">
                 <span className="text-white/70 text-sm font-medium">AI 분석 결과</span>
-                <span className="text-3xl font-bold" style={{ color: '#818cf8' }}>{notice.aiSummary.score}점</span>
+                <span className="text-3xl font-bold" style={{ color: '#006B7A' }}>{notice.aiSummary.score}점</span>
               </div>
               <p className="text-white font-medium text-sm">{notice.aiSummary.oneLiner}</p>
               <div className="space-y-2.5 text-sm text-white/50">
