@@ -1,17 +1,30 @@
 /**
  * POST /api/match
  *
- * 로그인한 사용자의 회사 프로필을 기준으로
- * '미분석' 상태인 공고들을 Claude AI로 일괄 분석합니다.
+ * 특정 공고 1건을 Claude AI로 분석합니다.
  *
- * Body: { limit?: number }  — 한 번에 처리할 최대 건수 (기본 20)
+ * 플랜별 월 쿼터:
+ *   free       →  3건/월
+ *   pro        → 100건/월
+ *   enterprise → 500건/월
+ *
+ * Body: { noticeId: string }
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { adminDb, requireAuth } from '@/lib/firebase-admin'
+import { adminDb, adminAuth, requireAuth } from '@/lib/firebase-admin'
 import { analyzeNoticeWithAI } from '@/lib/ai-analysis'
-import type { CompanyProfile } from '@/types'
+import type { CompanyProfile, Plan, AiUsage } from '@/types'
 import type { G2BNoticeItem } from '@/lib/g2b'
+import { Timestamp } from 'firebase-admin/firestore'
+
+const QUOTA: Record<Plan, number> = {
+  free: 3,
+  pro: 100,
+  enterprise: 500,
+}
+
+const TEST_ACCOUNTS = ['test@test.com']
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req)
@@ -19,68 +32,94 @@ export async function POST(req: NextRequest) {
   const { uid } = auth
 
   const body = await req.json().catch(() => ({}))
-  const batchLimit: number = body.limit ?? 20
+  const noticeId: string | undefined = body.noticeId
+
+  if (!noticeId) {
+    return NextResponse.json({ error: 'noticeId가 필요합니다.' }, { status: 400 })
+  }
 
   try {
-    const userSnap = await adminDb.collection('users').doc(uid).get()
+    const [userSnap, noticeSnap] = await Promise.all([
+      adminDb.collection('users').doc(uid).get(),
+      adminDb.collection('bid_notices').doc(noticeId).get(),
+    ])
+
     if (!userSnap.exists) {
       return NextResponse.json({ error: '회사 프로필을 먼저 등록해주세요.' }, { status: 400 })
     }
-    const profile = userSnap.data()!.profile as CompanyProfile
+    if (!noticeSnap.exists) {
+      return NextResponse.json({ error: '공고를 찾을 수 없습니다.' }, { status: 404 })
+    }
+
+    const userData = userSnap.data()!
+    const profile = userData.profile as CompanyProfile
+    const plan: Plan = userData.subscription?.plan ?? 'free'
+    const authUser = await adminAuth.getUser(uid)
+    const isTestAccount = TEST_ACCOUNTS.includes(authUser.email ?? '')
 
     if (!profile.bizCodes?.length) {
       return NextResponse.json({ error: '업종코드를 등록해야 매칭이 가능합니다.' }, { status: 400 })
     }
 
-    const unanalyzed = await adminDb
-      .collection('bid_notices')
-      .where('matchStatus', '==', '미분석')
-      .orderBy('createdAt', 'desc')
-      .limit(batchLimit)
-      .get()
+    // ─── 쿼터 확인 (테스트 계정 스킵) ─────────────────────────
+    const now = new Date()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let usage: any = userData.aiUsage ?? { count: 0, resetAt: Timestamp.fromDate(now) }
 
-    if (unanalyzed.empty) {
-      return NextResponse.json({ ok: true, matched: 0, message: '매칭할 공고가 없습니다.' })
-    }
+    if (!isTestAccount) {
+      // 리셋 시점이 지났으면 초기화
+      if (usage.resetAt.toDate() <= now) {
+        const nextReset = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+        usage = { count: 0, resetAt: Timestamp.fromDate(nextReset) }
+        await adminDb.collection('users').doc(uid).update({ aiUsage: usage })
+      }
 
-    // Claude API는 병렬 호출 (단, 과도한 동시 요청 방지를 위해 5개씩 처리)
-    const docs = unanalyzed.docs
-    let matched = 0
-    let failed = 0
-    const batch = adminDb.batch()
-
-    for (let i = 0; i < docs.length; i += 5) {
-      const chunk = docs.slice(i, i + 5)
-      const results = await Promise.allSettled(
-        chunk.map(async (doc) => {
-          const raw = doc.data().rawData as G2BNoticeItem | undefined
-          if (!raw) return null
-
-          const { aiSummary, matchStatus } = await analyzeNoticeWithAI(profile, raw)
-          return { ref: doc.ref, aiSummary, matchStatus }
-        })
-      )
-
-      for (const result of results) {
-        if (result.status === 'fulfilled' && result.value) {
-          const { ref, aiSummary, matchStatus } = result.value
-          batch.update(ref, {
-            matchStatus,
-            matchScore: aiSummary.score,
-            aiSummary,
-            analyzedAt: new Date(),
-            analyzedBy: uid,
-          })
-          matched++
-        } else {
-          failed++
-        }
+      const remaining = QUOTA[plan] - usage.count
+      if (remaining <= 0) {
+        return NextResponse.json(
+          {
+            error: `이번 달 AI 분석 한도(${QUOTA[plan]}건)를 모두 사용했습니다. 다음 달 1일에 초기화됩니다.`,
+            quota: QUOTA[plan],
+            used: usage.count,
+          },
+          { status: 429 }
+        )
       }
     }
 
-    await batch.commit()
+    // ─── AI 분석 ───────────────────────────────────────────────
+    const noticeData = noticeSnap.data()!
+    const raw = noticeData.rawData as G2BNoticeItem | undefined
 
-    return NextResponse.json({ ok: true, matched, failed, total: unanalyzed.size })
+    if (!raw) {
+      return NextResponse.json({ error: '공고 원본 데이터가 없습니다.' }, { status: 400 })
+    }
+
+    const { aiSummary, matchStatus } = await analyzeNoticeWithAI(profile, raw)
+
+    // 유저별 분석 결과 저장 (글로벌이 아닌 개인 서브컬렉션)
+    await adminDb.collection('users').doc(uid).collection('analyses').doc(noticeId).set({
+      noticeId,
+      aiSummary,
+      matchStatus,
+      score: aiSummary.score,
+      analyzedAt: Timestamp.now(),
+    })
+
+    // ─── 쿼터 차감 (테스트 계정 스킵) ─────────────────────────
+    const newCount = usage.count + 1
+    if (!isTestAccount) {
+      await adminDb.collection('users').doc(uid).update({ 'aiUsage.count': newCount })
+    }
+
+    return NextResponse.json({
+      ok: true,
+      aiSummary,
+      matchStatus,
+      quota: isTestAccount ? null : QUOTA[plan],
+      used: isTestAccount ? null : newCount,
+      remaining: isTestAccount ? null : QUOTA[plan] - newCount,
+    })
   } catch (err) {
     console.error('[match] 오류:', err)
     return NextResponse.json({ error: String(err) }, { status: 500 })

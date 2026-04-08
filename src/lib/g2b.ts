@@ -1,10 +1,10 @@
 /**
  * 나라장터(G2B) 조달청 Open API 클라이언트
- * API: https://apis.data.go.kr/1230000/BidPublicInfoService04
+ * API: https://apis.data.go.kr/1230000/ad/BidPublicInfoService
  * 문서: https://www.data.go.kr/data/15001101/openapi.do
  */
 
-const G2B_BASE = 'https://apis.data.go.kr/1230000/BidPublicInfoService04'
+const G2B_BASE = 'https://apis.data.go.kr/1230000/ad/BidPublicInfoService'
 const API_KEY = process.env.G2B_API_KEY!
 
 // ─── 나라장터 API 응답 타입 ───────────────────────────────────
@@ -36,7 +36,7 @@ interface G2BResponse {
   response: {
     header: { resultCode: string; resultMsg: string }
     body: {
-      items: { item: G2BNoticeItem[] } | G2BNoticeItem | ''
+      items: G2BNoticeItem[] | { item: G2BNoticeItem[] | G2BNoticeItem } | ''
       numOfRows: number
       pageNo: number
       totalCount: number
@@ -70,11 +70,26 @@ export interface FetchNoticesOptions {
 }
 
 /**
- * 나라장터 입찰공고 목록을 가져옵니다.
+ * 나라장터 공고 유형별 엔드포인트
+ * - Cnstwk: 공사
+ * - Servc:  용역 (소프트웨어, 영상제작, 컨설팅 등)
+ * - Thng:   물품
+ * - Etc:    기타 / 외자
+ */
+const G2B_ENDPOINTS: Record<string, string> = {
+  공사: 'getBidPblancListInfoCnstwk',
+  용역: 'getBidPblancListInfoServc',
+  물품: 'getBidPblancListInfoThng',
+  기타: 'getBidPblancListInfoEtc',
+}
+
+/**
+ * 특정 엔드포인트에서 나라장터 입찰공고 목록을 가져옵니다.
  * 서버 사이드 전용 (API_KEY 사용)
  */
 export async function fetchBidNotices(
-  options: FetchNoticesOptions = {}
+  options: FetchNoticesOptions = {},
+  endpoint: string = G2B_ENDPOINTS['공사']
 ): Promise<{ items: G2BNoticeItem[]; totalCount: number }> {
   const today = new Date()
   const {
@@ -100,33 +115,33 @@ export async function fetchBidNotices(
 
   if (keyword) params.set('bidNtceNm', keyword)
 
-  const url = `${G2B_BASE}/getBidPblancListInfoServc01?${params}`
+  const url = `${G2B_BASE}/${endpoint}?${params}`
 
   const res = await fetch(url, {
     next: { revalidate: 0 }, // 항상 최신 데이터
   })
 
   if (!res.ok) {
-    throw new Error(`나라장터 API 오류: ${res.status} ${res.statusText}`)
+    throw new Error(`나라장터 API 오류 [${endpoint}]: ${res.status} ${res.statusText}`)
   }
 
   const data: G2BResponse = await res.json()
   const { header, body } = data.response
 
   if (header.resultCode !== '00') {
-    throw new Error(`나라장터 API 결과 오류: ${header.resultCode} - ${header.resultMsg}`)
+    throw new Error(`나라장터 API 결과 오류 [${endpoint}]: ${header.resultCode} - ${header.resultMsg}`)
   }
 
-  // 응답이 없거나 빈 경우
   if (!body.items || (body.items as unknown) === '') {
     return { items: [], totalCount: 0 }
   }
 
-  // 1건이면 객체, 여러 건이면 배열
   const raw = body.items
   let items: G2BNoticeItem[]
 
-  if ('item' in raw) {
+  if (Array.isArray(raw)) {
+    items = raw
+  } else if ('item' in raw) {
     items = Array.isArray(raw.item) ? raw.item : [raw.item]
   } else {
     items = [raw as G2BNoticeItem]
@@ -136,19 +151,45 @@ export async function fetchBidNotices(
 }
 
 /**
- * 오늘 등록된 전체 공고를 페이지네이션으로 모두 가져옵니다.
+ * 단일 엔드포인트의 전체 페이지를 순회합니다.
  */
-export async function fetchAllTodayNotices(): Promise<G2BNoticeItem[]> {
+async function fetchAllFromEndpoint(
+  options: FetchNoticesOptions,
+  endpoint: string
+): Promise<G2BNoticeItem[]> {
   const all: G2BNoticeItem[] = []
   let pageNo = 1
   const numOfRows = 100
 
   while (true) {
-    const { items, totalCount } = await fetchBidNotices({ numOfRows, pageNo })
+    const { items, totalCount } = await fetchBidNotices({ ...options, numOfRows, pageNo }, endpoint)
     all.push(...items)
-
     if (all.length >= totalCount || items.length === 0) break
     pageNo++
+  }
+
+  return all
+}
+
+/**
+ * 오늘 등록된 전체 공고를 공사/용역/물품/기타 4개 유형에서 모두 가져옵니다.
+ * 각 유형은 병렬로 요청합니다.
+ */
+export async function fetchAllTodayNotices(options: FetchNoticesOptions = {}): Promise<G2BNoticeItem[]> {
+  const results = await Promise.allSettled(
+    Object.entries(G2B_ENDPOINTS).map(([, endpoint]) =>
+      fetchAllFromEndpoint(options, endpoint)
+    )
+  )
+
+  const all: G2BNoticeItem[] = []
+  for (const result of results) {
+    if (result.status === 'fulfilled') {
+      all.push(...result.value)
+    } else {
+      // 한 유형이 실패해도 나머지는 계속
+      console.warn('[fetchAllTodayNotices] 일부 엔드포인트 실패:', result.reason)
+    }
   }
 
   return all

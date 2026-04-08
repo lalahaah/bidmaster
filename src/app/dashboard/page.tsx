@@ -2,9 +2,9 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { getBidNotices } from '@/lib/firestore'
+import { getUserAnalyses } from '@/lib/firestore'
 import { auth } from '@/lib/firebase'
-import type { BidNotice, MatchStatus } from '@/types'
+import type { BidNotice, EnrichedNotice, AISummary, MatchStatus } from '@/types'
 
 const STATUS_STYLE: Record<MatchStatus, { bg: string; color: string }> = {
   '가능':  { bg: 'rgba(34,197,94,0.12)',  color: '#4ade80' },
@@ -13,24 +13,103 @@ const STATUS_STYLE: Record<MatchStatus, { bg: string; color: string }> = {
   '미분석':{ bg: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.35)' },
 }
 
-export default function DashboardPage() {
-  const { userDoc } = useAuth()
-  const [notices, setNotices] = useState<BidNotice[]>([])
-  const [loading, setLoading] = useState(true)
-  const [selected, setSelected] = useState<BidNotice | null>(null)
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [analyzeResult, setAnalyzeResult] = useState<string | null>(null)
+const TEST_ACCOUNTS = ['test@test.com']
+const QUOTA: Record<string, number> = { free: 3, pro: 100, enterprise: 500 }
 
-  const loadNotices = useCallback(() => {
+type SortKey = 'relevance' | 'deadline' | 'amount' | 'latest'
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: 'relevance', label: '관련도순' },
+  { key: 'deadline',  label: '마감임박순' },
+  { key: 'amount',    label: '금액높은순' },
+  { key: 'latest',    label: '최신등록순' },
+]
+
+/** 마감일까지 남은 일수 → 표시용 문자열 + 색상 */
+function deadlineBadge(notice: EnrichedNotice & { _daysLeft?: number | null }) {
+  const days = notice._daysLeft
+  if (days === undefined || days === null) return null
+  if (days < 0)   return { label: '마감',      color: 'rgba(255,255,255,0.2)' }
+  if (days === 0) return { label: 'D-Day',     color: '#f87171' }
+  if (days <= 3)  return { label: `D-${days}`, color: '#f87171' }
+  if (days <= 7)  return { label: `D-${days}`, color: '#fb923c' }
+  if (days <= 14) return { label: `D-${days}`, color: '#facc15' }
+  if (days <= 30) return { label: `D-${days}`, color: '#4ade80' }
+  return { label: `D-${days}`, color: 'rgba(255,255,255,0.3)' }
+}
+
+function sortNotices(list: EnrichedNotice[], key: SortKey): EnrichedNotice[] {
+  const copy = [...list]
+  switch (key) {
+    case 'relevance':
+      return copy.sort((a, b) => ((b as never as Record<string, number>)._score ?? 0) - ((a as never as Record<string, number>)._score ?? 0))
+    case 'deadline':
+      return copy.sort((a, b) => {
+        const da = (a as never as Record<string, number | null>)._daysLeft
+        const db = (b as never as Record<string, number | null>)._daysLeft
+        if (da === null || da === undefined) return 1
+        if (db === null || db === undefined) return -1
+        if ((da as number) < 0) return 1
+        if ((db as number) < 0) return -1
+        return (da as number) - (db as number)
+      })
+    case 'amount':
+      return copy.sort((a, b) => b.estimatedAmount - a.estimatedAmount)
+    case 'latest':
+      return copy  // API가 이미 최신순
+    default:
+      return copy
+  }
+}
+
+export default function DashboardPage() {
+  const { userDoc, user, refreshUserDoc } = useAuth()
+  const [notices, setNotices] = useState<EnrichedNotice[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadingMsg, setLoadingMsg] = useState('공고 불러오는 중...')
+  const [selected, setSelected] = useState<EnrichedNotice | null>(null)
+  const [isPersonalized, setIsPersonalized] = useState(false)
+  const [sortKey, setSortKey] = useState<SortKey>('relevance')
+
+  const loadNotices = useCallback(async () => {
+    if (!user) return
     setLoading(true)
-    getBidNotices({}, 50).then((data) => { setNotices(data); setLoading(false) })
-  }, [])
+    setLoadingMsg('나라장터에서 맞춤 공고 검색 중...')
+    try {
+      const token = await auth!.currentUser!.getIdToken()
+      const [res, analyses] = await Promise.all([
+        fetch('/api/notices/personalized', {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        getUserAnalyses(user.uid),
+      ])
+      const data = await res.json()
+      const rawNotices: BidNotice[] = data.notices ?? []
+      setIsPersonalized(data.personalized ?? false)
+
+      const enriched: EnrichedNotice[] = rawNotices.map((n) => {
+        const analysis = analyses[n.id]
+        return {
+          ...n,
+          matchStatus: analysis?.matchStatus ?? '미분석',
+          aiSummary: analysis?.aiSummary ?? null,
+        }
+      })
+      setNotices(enriched)
+    } finally {
+      setLoading(false)
+      setLoadingMsg('공고 불러오는 중...')
+    }
+  }, [user])
 
   useEffect(() => { loadNotices() }, [loadNotices])
 
   const plan = userDoc?.subscription.plan ?? 'free'
+  const isTestAccount = TEST_ACCOUNTS.includes(user?.email ?? '')
+  const quota = isTestAccount ? Infinity : (QUOTA[plan] ?? 3)
+  const usedCount = userDoc?.aiUsage?.count ?? 0
+  const remaining = isTestAccount ? Infinity : Math.max(0, quota - usedCount)
 
-  // KPI — 실제 데이터 기반
+  // KPI
   const total = notices.length
   const possible = notices.filter(n => n.matchStatus === '가능').length
   const conditional = notices.filter(n => n.matchStatus === '조건부').length
@@ -39,30 +118,18 @@ export default function DashboardPage() {
     ? Math.round(notices.filter(n => n.aiSummary).reduce((s, n) => s + (n.aiSummary?.score ?? 0), 0) / analyzed)
     : 0
 
-  const handleAnalyze = async () => {
-    if (!auth) return
-    setIsAnalyzing(true)
-    setAnalyzeResult(null)
-    try {
-      const token = await auth.currentUser?.getIdToken()
-      if (!token) throw new Error('로그인이 필요합니다.')
-      const res = await fetch('/api/match', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ limit: 20 }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? '분석 실패')
-      setAnalyzeResult(`${data.matched}건 분석 완료`)
-      loadNotices()
-    } catch (err) {
-      setAnalyzeResult(`오류: ${String(err)}`)
-    } finally {
-      setIsAnalyzing(false)
-    }
-  }
-
   const unanalyzedCount = notices.filter(n => n.matchStatus === '미분석').length
+
+  // 개별 분석 완료 후 리스트 내 해당 공고 업데이트
+  const handleAnalyzed = useCallback((noticeId: string, aiSummary: AISummary, matchStatus: MatchStatus) => {
+    setNotices(prev => prev.map(n =>
+      n.id === noticeId ? { ...n, aiSummary, matchStatus } : n
+    ))
+    setSelected(prev => prev?.id === noticeId ? { ...prev, aiSummary, matchStatus } : prev)
+    refreshUserDoc()
+  }, [refreshUserDoc])
+
+  const hasProfile = !!(userDoc?.profile?.bizCodes?.length)
 
   return (
     <div className="p-8">
@@ -70,24 +137,25 @@ export default function DashboardPage() {
       <div className="mb-8 flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">대시보드</h1>
-          <p className="text-white/40 text-sm mt-1">AI 추천 공고를 확인하세요</p>
+          <p className="text-white/40 text-sm mt-1">
+            {isPersonalized
+              ? '내 프로필에 맞는 공고를 우선 표시합니다'
+              : '공고를 클릭하면 AI 분석을 실행할 수 있습니다'}
+          </p>
         </div>
         <div className="flex items-center gap-3">
-          {analyzeResult && (
-            <span className="text-xs text-emerald-400">{analyzeResult}</span>
+          {isTestAccount ? (
+            <span className="text-xs px-3 py-1.5 rounded-full" style={{ background: 'rgba(104,213,133,0.1)', color: '#68D585' }}>
+              테스트 계정 (무제한)
+            </span>
+          ) : (
+            <span className="text-xs px-3 py-1.5 rounded-full" style={{
+              background: remaining > 5 ? 'rgba(104,213,133,0.1)' : 'rgba(234,179,8,0.1)',
+              color: remaining > 5 ? '#68D585' : '#facc15',
+            }}>
+              AI 분석 {isTestAccount ? '∞' : `${usedCount}/${quota}`}건 사용
+            </span>
           )}
-          <button
-            onClick={handleAnalyze}
-            disabled={isAnalyzing || unanalyzedCount === 0}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{ background: 'linear-gradient(135deg, #006B7A, #006B7A)' }}
-          >
-            {isAnalyzing ? (
-              <><div className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white animate-spin" /> 분석 중...</>
-            ) : (
-              <>`⚡ AI 분석 시작 {unanalyzedCount > 0 ? `(${unanalyzedCount}건)` : ''}`</>
-            )}
-          </button>
         </div>
       </div>
 
@@ -120,8 +188,31 @@ export default function DashboardPage() {
         ))}
       </div>
 
+      {/* 프로필 미설정 안내 */}
+      {!hasProfile && (
+        <div
+          className="mb-6 p-4 rounded-xl flex items-center justify-between"
+          style={{
+            background: 'linear-gradient(135deg, rgba(234,179,8,0.1), rgba(234,179,8,0.06))',
+            border: '1px solid rgba(234,179,8,0.25)',
+          }}
+        >
+          <div>
+            <p className="text-white font-medium text-sm">회사 프로필을 먼저 설정해주세요</p>
+            <p className="text-white/45 text-xs mt-0.5">업종코드, 면허 등을 입력해야 AI가 내 회사에 맞는 공고를 분석할 수 있습니다.</p>
+          </div>
+          <a
+            href="/dashboard/profile"
+            className="px-4 py-2 rounded-lg text-sm font-semibold text-white shrink-0 ml-4"
+            style={{ background: '#b45309' }}
+          >
+            프로필 설정
+          </a>
+        </div>
+      )}
+
       {/* 업그레이드 배너 */}
-      {plan === 'free' && (
+      {plan === 'free' && !isTestAccount && (
         <div
           className="mb-6 p-4 rounded-xl flex items-center justify-between"
           style={{
@@ -130,12 +221,12 @@ export default function DashboardPage() {
           }}
         >
           <div>
-            <p className="text-white font-medium text-sm">무료 체험 중</p>
-            <p className="text-white/45 text-xs mt-0.5">Pro 플랜으로 업그레이드하면 무제한 공고 분석이 가능합니다.</p>
+            <p className="text-white font-medium text-sm">무료 체험 중 ({remaining}건 남음)</p>
+            <p className="text-white/45 text-xs mt-0.5">Pro 플랜으로 업그레이드하면 월 100건 AI 분석이 가능합니다.</p>
           </div>
           <button
             className="px-4 py-2 rounded-lg text-sm font-semibold text-white shrink-0 ml-4"
-            style={{ background: 'linear-gradient(135deg, #006B7A, #006B7A)' }}
+            style={{ background: '#006B7A' }}
           >
             업그레이드
           </button>
@@ -148,35 +239,65 @@ export default function DashboardPage() {
         style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
       >
         <div
-          className="px-6 py-4 flex items-center justify-between"
+          className="px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
           style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
         >
-          <span className="text-white font-semibold text-sm">공고 리스트</span>
-          <div className="flex items-center gap-2">
+          {/* 왼쪽: 타이틀 + 뱃지 */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-white font-semibold text-sm">공고 리스트</span>
+            {isPersonalized && (
+              <span className="text-xs px-2.5 py-1 rounded-full" style={{ background: 'rgba(104,213,133,0.1)', color: '#4ade80' }}>
+                내 프로필 맞춤
+              </span>
+            )}
             {unanalyzedCount > 0 && (
               <span className="text-xs px-2.5 py-1 rounded-full" style={{ background: 'rgba(234,179,8,0.15)', color: '#facc15' }}>
                 미분석 {unanalyzedCount}건
               </span>
             )}
-            <span className="text-xs px-3 py-1 rounded-full" style={{ background: 'rgba(0,107,122,0.15)', color: '#006B7A' }}>
-              전체 {notices.length}건
+            <span className="text-xs px-2.5 py-1 rounded-full" style={{ background: 'rgba(0,107,122,0.15)', color: '#006B7A' }}>
+              {notices.length}건
             </span>
+          </div>
+
+          {/* 오른쪽: 정렬 탭 */}
+          <div className="flex items-center gap-1">
+            {SORT_OPTIONS.map(opt => (
+              <button
+                key={opt.key}
+                onClick={() => setSortKey(opt.key)}
+                className="px-2.5 py-1 rounded-lg text-xs transition-all"
+                style={sortKey === opt.key
+                  ? { background: 'rgba(0,107,122,0.3)', color: '#5BBCCA', fontWeight: 600 }
+                  : { background: 'transparent', color: 'rgba(255,255,255,0.3)' }
+                }
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-20">
+          <div className="flex flex-col items-center justify-center py-20 gap-3">
             <div className="w-8 h-8 rounded-full border-2 border-blue-500/20 border-t-blue-500 animate-spin" />
+            <p className="text-white/30 text-xs">{loadingMsg}</p>
           </div>
         ) : notices.length === 0 ? (
           <div className="text-center py-20 text-white/25">
             <p className="text-4xl mb-3">📭</p>
-            <p className="text-sm">아직 수집된 공고가 없습니다.</p>
+            <p className="text-sm">
+              {isPersonalized
+                ? '프로필에 맞는 공고가 없습니다. 희망 금액 범위나 키워드를 조정해보세요.'
+                : '아직 수집된 공고가 없습니다.'}
+            </p>
             <p className="text-xs mt-1 text-white/15">매일 08:00에 자동으로 수집됩니다.</p>
           </div>
         ) : (
           <div>
-            {notices.map((notice) => (
+            {sortNotices(notices, sortKey).map((notice) => {
+              const badge = deadlineBadge(notice as EnrichedNotice & { _daysLeft?: number | null })
+              return (
               <button
                 key={notice.id}
                 onClick={() => setSelected(notice)}
@@ -187,13 +308,19 @@ export default function DashboardPage() {
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5">
+                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                       <span
                         className="text-xs px-2 py-0.5 rounded-full font-medium"
                         style={STATUS_STYLE[notice.matchStatus]}
                       >
                         {notice.matchStatus}
                       </span>
+                      {badge && (
+                        <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+                          style={{ background: 'rgba(255,255,255,0.05)', color: badge.color }}>
+                          {badge.label}
+                        </span>
+                      )}
                       {notice.aiSummary && (
                         <span className="text-xs text-white/25">{notice.aiSummary.score}점</span>
                       )}
@@ -206,28 +333,85 @@ export default function DashboardPage() {
                       <p className="text-white/25 text-xs mt-1 truncate">{notice.aiSummary.oneLiner}</p>
                     )}
                   </div>
-                  {notice.aiSummary && (
-                    <div
-                      className="text-2xl font-bold shrink-0"
-                      style={{ color: notice.aiSummary.score >= 70 ? '#006B7A' : 'rgba(255,255,255,0.2)' }}
-                    >
-                      {notice.aiSummary.score}
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {notice.aiSummary ? (
+                      <div
+                        className="text-2xl font-bold"
+                        style={{ color: notice.aiSummary.score >= 70 ? '#006B7A' : 'rgba(255,255,255,0.2)' }}
+                      >
+                        {notice.aiSummary.score}
+                      </div>
+                    ) : (
+                      <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(0,107,122,0.15)', color: '#5BBCCA' }}>
+                        ⚡ 분석하기
+                      </span>
+                    )}
+                  </div>
                 </div>
               </button>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
 
-      {selected && <SlideOver notice={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <SlideOver
+          notice={selected}
+          onClose={() => setSelected(null)}
+          onAnalyzed={handleAnalyzed}
+          remaining={remaining}
+          isTestAccount={isTestAccount}
+        />
+      )}
     </div>
   )
 }
 
-function SlideOver({ notice, onClose }: { notice: BidNotice; onClose: () => void }) {
-  const s = STATUS_STYLE[notice.matchStatus]
+function SlideOver({
+  notice,
+  onClose,
+  onAnalyzed,
+  remaining,
+  isTestAccount,
+}: {
+  notice: EnrichedNotice
+  onClose: () => void
+  onAnalyzed: (id: string, aiSummary: AISummary, matchStatus: MatchStatus) => void
+  remaining: number | typeof Infinity
+  isTestAccount: boolean
+}) {
+  const [current, setCurrent] = useState<EnrichedNotice>(notice)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const s = STATUS_STYLE[current.matchStatus]
+
+  const handleAnalyze = async () => {
+    if (!auth?.currentUser) return
+    setIsAnalyzing(true)
+    setError(null)
+    try {
+      const token = await auth.currentUser.getIdToken()
+      const res = await fetch('/api/match', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ noticeId: current.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? '분석 실패')
+
+      const updated: EnrichedNotice = { ...current, aiSummary: data.aiSummary, matchStatus: data.matchStatus }
+      setCurrent(updated)
+      onAnalyzed(current.id, data.aiSummary, data.matchStatus)
+    } catch (err) {
+      setError(String(err))
+    } finally {
+      setIsAnalyzing(false)
+    }
+  }
+
+  const canAnalyze = current.matchStatus === '미분석' && !isAnalyzing && (isTestAccount || remaining > 0)
+
   return (
     <>
       <div className="fixed inset-0 bg-black/60 z-40 backdrop-blur-sm" onClick={onClose} />
@@ -246,19 +430,19 @@ function SlideOver({ notice, onClose }: { notice: BidNotice; onClose: () => void
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
           <div>
             <span className="text-xs px-2.5 py-1 rounded-full font-medium inline-block mb-3" style={s}>
-              {notice.matchStatus}
+              {current.matchStatus}
             </span>
-            <h4 className="text-white font-bold text-lg leading-snug">{notice.title}</h4>
-            <p className="text-white/40 text-sm mt-1">{notice.orgName}</p>
+            <h4 className="text-white font-bold text-lg leading-snug">{current.title}</h4>
+            <p className="text-white/40 text-sm mt-1">{current.orgName}</p>
           </div>
 
           <div className="space-y-3">
-            <InfoRow label="추정금액" value={notice.estimatedAmount > 0 ? `${notice.estimatedAmount.toLocaleString()}만원` : '미공개'} />
-            <InfoRow label="마감일" value={notice.deadline?.toDate?.().toLocaleDateString('ko-KR') ?? '-'} />
-            {notice.requirements && <InfoRow label="공고 유형" value={notice.requirements} />}
+            <InfoRow label="추정금액" value={current.estimatedAmount > 0 ? `${current.estimatedAmount.toLocaleString()}만원` : '미공개'} />
+            <InfoRow label="마감일" value={current.deadline?.toDate?.().toLocaleDateString('ko-KR') ?? '-'} />
+            {current.requirements && <InfoRow label="공고 유형" value={current.requirements} />}
           </div>
 
-          {notice.aiSummary ? (
+          {current.aiSummary ? (
             <div
               className="rounded-2xl p-5 space-y-4"
               style={{
@@ -268,33 +452,51 @@ function SlideOver({ notice, onClose }: { notice: BidNotice; onClose: () => void
             >
               <div className="flex items-center justify-between">
                 <span className="text-white/70 text-sm font-medium">AI 분석 결과</span>
-                <span className="text-3xl font-bold" style={{ color: '#006B7A' }}>{notice.aiSummary.score}점</span>
+                <span className="text-3xl font-bold" style={{ color: '#006B7A' }}>{current.aiSummary.score}점</span>
               </div>
-              <p className="text-white font-medium text-sm">{notice.aiSummary.oneLiner}</p>
+              <p className="text-white font-medium text-sm">{current.aiSummary.oneLiner}</p>
               <div className="space-y-2.5 text-sm text-white/50">
-                {notice.aiSummary.qualifications && (
-                  <p><span className="text-white/30">필수 자격</span><br />{notice.aiSummary.qualifications}</p>
+                {current.aiSummary.qualifications && (
+                  <p><span className="text-white/30">필수 자격</span><br />{current.aiSummary.qualifications}</p>
                 )}
-                {notice.aiSummary.cautions && (
-                  <p><span className="text-white/30">주의사항</span><br />{notice.aiSummary.cautions}</p>
+                {current.aiSummary.cautions && (
+                  <p><span className="text-white/30">주의사항</span><br />{current.aiSummary.cautions}</p>
                 )}
-                <p><span className="text-white/30">난이도</span> · <span className="text-white/70">{notice.aiSummary.difficulty}</span></p>
-                {notice.aiSummary.advantages && (
-                  <p><span className="text-white/30">유리한 점</span><br />{notice.aiSummary.advantages}</p>
+                <p><span className="text-white/30">난이도</span> · <span className="text-white/70">{current.aiSummary.difficulty}</span></p>
+                {current.aiSummary.advantages && (
+                  <p><span className="text-white/30">유리한 점</span><br />{current.aiSummary.advantages}</p>
                 )}
               </div>
             </div>
           ) : (
-            <div
-              className="rounded-2xl p-5 text-center text-white/25 text-sm"
-              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
-            >
-              AI 분석 대기 중...
+            <div className="space-y-3">
+              {error && (
+                <p className="text-xs text-red-400 text-center">{error}</p>
+              )}
+              <button
+                onClick={handleAnalyze}
+                disabled={!canAnalyze}
+                className="w-full py-3.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                style={{ background: '#006B7A', boxShadow: '0 4px 16px rgba(0,107,122,0.3)' }}
+              >
+                {isAnalyzing ? (
+                  <><div className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white animate-spin" /> AI 분석 중...</>
+                ) : !isTestAccount && remaining === 0 ? (
+                  '⚡ 이번 달 분석 한도 소진'
+                ) : (
+                  '⚡ AI 분석하기'
+                )}
+              </button>
+              {!isTestAccount && remaining <= 3 && remaining > 0 && (
+                <p className="text-xs text-center" style={{ color: '#facc15' }}>
+                  이번 달 분석 {remaining}건 남음
+                </p>
+              )}
             </div>
           )}
 
           <a
-            href={notice.noticeUrl}
+            href={current.noticeUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="block w-full text-center py-3 rounded-xl text-sm font-medium text-white/60 hover:text-white transition-colors"

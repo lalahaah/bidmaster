@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useAuth } from '@/contexts/AuthContext'
 
 // ── BidMaster 브랜드 컬러 ───────────────────────────────────
 // bg: #fcfdfe  |  section-alt: #f4f7fa  |  dark: #161c2d
@@ -36,6 +37,8 @@ export default function LandingPage() {
 
 /* ─── NAV ──────────────────────────────────────────────────── */
 function Nav() {
+  const { user, loading, signOut } = useAuth()
+
   return (
     <header className="w-full px-8 py-5" style={{ borderBottom: '1px solid #e7e9ed' }}>
       <div className="max-w-6xl mx-auto flex items-center justify-between">
@@ -51,18 +54,37 @@ function Nav() {
           ))}
         </nav>
 
-        {/* CTA */}
         <div className="hidden md:flex items-center gap-3">
-          <Link href="/login?mode=login"
-            className="font-bold rounded-lg px-4 py-2.5 transition-colors hover:text-[#006B7A]"
-            style={{ fontSize: '15px', color: '#161c2d', letterSpacing: '-0.3px' }}>
-            로그인
-          </Link>
-          <Link href="/login"
-            className="inline-flex items-center justify-center text-white font-bold rounded-lg px-5 py-2.5 transition-opacity hover:opacity-90"
-            style={{ background: '#006B7A', fontSize: '15px', letterSpacing: '-0.5px' }}>
-            무료 체험 시작
-          </Link>
+          {!loading && user ? (
+            <>
+              <span style={{ fontSize: '14px', color: '#717182', letterSpacing: '-0.1px' }}>
+                {user.displayName ?? user.email}
+              </span>
+              <Link href="/dashboard"
+                className="inline-flex items-center justify-center text-white font-bold rounded-lg px-5 py-2.5 transition-opacity hover:opacity-90"
+                style={{ background: '#006B7A', fontSize: '15px', letterSpacing: '-0.5px' }}>
+                대시보드 →
+              </Link>
+              <button onClick={signOut}
+                className="font-bold rounded-lg px-4 py-2.5 transition-colors hover:text-[#006B7A]"
+                style={{ fontSize: '15px', color: '#717182', letterSpacing: '-0.3px' }}>
+                로그아웃
+              </button>
+            </>
+          ) : (
+            <>
+              <Link href="/login?mode=login"
+                className="font-bold rounded-lg px-4 py-2.5 transition-colors hover:text-[#006B7A]"
+                style={{ fontSize: '15px', color: '#161c2d', letterSpacing: '-0.3px' }}>
+                로그인
+              </Link>
+              <Link href="/login"
+                className="inline-flex items-center justify-center text-white font-bold rounded-lg px-5 py-2.5 transition-opacity hover:opacity-90"
+                style={{ background: '#006B7A', fontSize: '15px', letterSpacing: '-0.5px' }}>
+                무료 체험 시작
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </header>

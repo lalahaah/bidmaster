@@ -15,6 +15,7 @@ import { db } from './firebase'
 import type {
   UserDocument,
   BidNotice,
+  UserAnalysis,
   CompanyProfile,
   NotificationSettings,
   BidFilterOptions,
@@ -60,6 +61,12 @@ export async function createUserDoc(
       plan: 'free',
       trialEndsAt: null,
       paidUntil: null,
+    },
+    aiUsage: {
+      count: 0,
+      resetAt: Timestamp.fromDate((() => {
+        const d = new Date(); d.setMonth(d.getMonth() + 1, 1); d.setHours(0, 0, 0, 0); return d
+      })()),
     },
     createdAt: now,
     updatedAt: now,
@@ -109,6 +116,14 @@ export async function getBidNotices(
   return snap.docs.map((d) => ({ id: d.id, ...d.data() } as BidNotice))
 }
 
+export async function getUserAnalyses(uid: string): Promise<Record<string, UserAnalysis>> {
+  const ref = collection(db, 'users', uid, 'analyses')
+  const snap = await getDocs(ref)
+  const result: Record<string, UserAnalysis> = {}
+  snap.docs.forEach((d) => { result[d.id] = d.data() as UserAnalysis })
+  return result
+}
+
 export async function getBidNoticeById(id: string): Promise<BidNotice | null> {
   const ref = doc(db, 'bid_notices', id)
   const snap = await getDoc(ref)
@@ -116,11 +131,3 @@ export async function getBidNoticeById(id: string): Promise<BidNotice | null> {
   return { id: snap.id, ...snap.data() } as BidNotice
 }
 
-export async function updateMatchStatus(
-  id: string,
-  matchStatus: BidNotice['matchStatus'],
-  extra?: Record<string, unknown>
-): Promise<void> {
-  const ref = doc(db, 'bid_notices', id)
-  await updateDoc(ref, { matchStatus, ...extra })
-}

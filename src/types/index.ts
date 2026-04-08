@@ -16,6 +16,9 @@ export interface CompanyProfile {
   revenue: number      // 최근 3년 평균 실적 (만원)
   headcount: number    // 직원 수
   region: string       // 주사업 지역
+  amountMin?: number   // [신규 추가] 참여 희망 최소금액 (만원)
+  amountMax?: number   // [신규 추가] 참여 희망 최대금액 (만원)
+  keywords?: string[]  // [신규 추가] 실적 키워드
 }
 
 // ─── 알림 설정 ────────────────────────────────────────────────
@@ -32,6 +35,12 @@ export interface Subscription {
   paidUntil: Timestamp | null
 }
 
+// ─── AI 사용량 ────────────────────────────────────────────────
+export interface AiUsage {
+  count: number        // 이번 달 분석 건수
+  resetAt: Timestamp   // 다음 리셋 일시 (매월 1일)
+}
+
 // ─── 사용자 문서 ─────────────────────────────────────────────
 export interface UserDocument {
   uid: string
@@ -41,65 +50,71 @@ export interface UserDocument {
   profile: CompanyProfile
   settings: NotificationSettings
   subscription: Subscription
+  aiUsage: AiUsage
   createdAt: Timestamp
   updatedAt: Timestamp
 }
 
 // ─── AI 분석 요약 ────────────────────────────────────────────
 export interface AISummary {
-  qualifications: string   // 필수 자격 조건 (3줄 이내)
-  cautions: string         // 주의사항
+  qualifications: string
+  cautions: string
   difficulty: Difficulty
-  advantages: string       // 우리 회사에 유리한 포인트
-  oneLiner: string         // 한줄 요약 (20자 이내)
-  score: number            // 추천 점수 0~100
+  advantages: string
+  oneLiner: string
+  score: number
 }
 
-// ─── 입찰 공고 ───────────────────────────────────────────────
+// ─── 유저별 분석 결과 (users/{uid}/analyses/{noticeId}) ──────
+export interface UserAnalysis {
+  noticeId: string
+  aiSummary: AISummary
+  matchStatus: MatchStatus
+  score: number
+  analyzedAt: Timestamp
+}
+
+// ─── 입찰 공고 (전역 원본 데이터) ────────────────────────────
 export interface BidNotice {
-  id: string               // 공고번호 (doc ID)
+  id: string
   title: string
-  orgName: string          // 발주기관
-  bizCode: string          // 업종코드
-  estimatedAmount: number  // 추정금액 (만원)
+  orgName: string
+  bizCode: string
+  estimatedAmount: number
   deadline: Timestamp
-  requirements: string     // 자격조건 원문
-  noticeUrl: string        // 나라장터 원문 링크
+  requirements: string
+  noticeUrl: string
+  rawData: G2BNoticeItem
+  createdAt: Timestamp
+}
+
+// ─── 공고 + 유저 분석 병합 (대시보드 표시용) ─────────────────
+export interface EnrichedNotice extends BidNotice {
   matchStatus: MatchStatus
   aiSummary: AISummary | null
-  createdAt: Timestamp
-  analyzedAt: Timestamp | null
 }
 
 // ─── 나라장터 API 응답 ───────────────────────────────────────
 export interface G2BNoticeItem {
-  bidNtceNo: string          // 공고번호
-  bidNtceNm: string          // 공고명
-  ntceInsttNm: string        // 공고기관명
-  dminsttNm: string          // 수요기관명
-  bidNtceDt: string          // 공고일시
-  opengDt: string            // 개찰일시
-  bidClseDt: string          // 입찰마감일시
-  presmptPrce: string        // 추정가격
-  bidMthdNm: string          // 입찰방법명
-  ntceKindNm: string         // 공고종류명
-  linkUrl: string            // 링크URL
+  bidNtceNo: string
+  bidNtceOrd: string
+  bidNtceNm: string
+  ntceInsttNm: string
+  dminsttNm: string
+  bidNtceDt: string
+  opengDt: string
+  bidClseDt: string
+  presmptPrce: string
+  bidMethdNm: string
+  ntceKindNm: string
+  bidNtceDtlUrl: string
+  bsnsDivNm: string
+  indstrytyLmtYn: string
 }
 
 // ─── 필터 옵션 ───────────────────────────────────────────────
 export interface BidFilterOptions {
   matchStatus?: MatchStatus
   minScore?: number
-  maxAmount?: number
-  region?: string
   searchQuery?: string
-}
-
-// ─── KPI 카드 ─────────────────────────────────────────────────
-export interface KpiCard {
-  label: string
-  value: string | number
-  change?: string
-  changeType?: 'positive' | 'negative' | 'neutral'
-  icon: string
 }
