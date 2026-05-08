@@ -12,7 +12,7 @@ const plusJakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: 'BidMaster — 놓치는 공고 없이, 이기는 입찰만',
   description:
-    '나라장터 입찰 공고를 AI가 자동 분석하여 우리 회사에 맞는 공고만 카카오톡(메시지)으로 알려주는 SaaS',
+    '나라장터 입찰 공고를 AI가 자동 분석하여 우리 회사에 맞는 공고만 카카오톡으로 알려주는 SaaS',
   keywords: ['나라장터', '입찰', '공공조달', 'AI', '입찰공고', '자동분석'],
   openGraph: {
     title: 'BidMaster',

@@ -20,12 +20,12 @@ export async function analyzeNoticeWithAI(
 ): Promise<AIMatchResult> {
   const amount = parseAmountToManwon(notice.presmptPrce || '0')
 
-  // [신규 추가] 금액 범위 및 실적 키워드
+  // 금액 범위 및 실적 키워드
   const amountMin = profile.amountMin ?? 0
   const amountMax = profile.amountMax ?? 0
   const keywords = profile.keywords ?? []
 
-  // [신규 추가] 금액 범위 가중치 계산 안내 텍스트 구성
+  // 금액 범위 가중치 계산 안내 텍스트 구성
   const amountRangeText =
     amountMin > 0 && amountMax > 0
       ? `${amountMin.toLocaleString()}만원 ~ ${amountMax.toLocaleString()}만원`
@@ -33,13 +33,13 @@ export async function analyzeNoticeWithAI(
 
   const keywordsText = keywords.length > 0 ? keywords.join(', ') : '없음'
 
-  // [신규 추가] 금액 범위 가중치 지시 (미설정 시 적용 안 함)
+  // 금액 범위 가중치 지시 (미설정 시 적용 안 함)
   const amountScoreInstruction =
     amountMin > 0 && amountMax > 0 && amount > 0
       ? `- 공고 추정금액(${amount.toLocaleString()}만원)이 희망 범위(${amountMin.toLocaleString()}~${amountMax.toLocaleString()}만원) 내이면 +20점, 범위 밖이면 -30점`
       : '- 금액 범위 미설정 또는 금액 미공개이므로 금액 가중치 적용 안 함'
 
-  // [신규 추가] 키워드 매칭 가중치 지시
+  // 키워드 매칭 가중치 지시
   const keywordScoreInstruction =
     keywords.length > 0
       ? `- 공고명/공고종류에 실적 키워드(${keywordsText})와 매칭되는 항목이 있으면 매칭 1개당 +10점 (최대 +30점)`
@@ -94,7 +94,7 @@ ${keywordScoreInstruction}
   const parsed = JSON.parse(jsonMatch[0])
 
   const aiSummary: AISummary = {
-    score: Math.min(100, Math.max(0, Number(parsed.score) || 0)), // [신규 추가] 0~100 클램프
+    score: Math.min(100, Math.max(0, Number(parsed.score) || 0)),
     qualifications: parsed.qualifications || '',
     cautions: parsed.cautions || '',
     difficulty: parsed.difficulty || '중',

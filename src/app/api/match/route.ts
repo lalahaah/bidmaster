@@ -17,6 +17,7 @@ import { analyzeNoticeWithAI } from '@/lib/ai-analysis'
 import type { CompanyProfile, Plan, AiUsage } from '@/types'
 import type { G2BNoticeItem } from '@/lib/g2b'
 import { Timestamp } from 'firebase-admin/firestore'
+import { sendKakaoNotification } from '@/lib/kakao'
 
 const QUOTA: Record<Plan, number> = {
   free: 3,
@@ -105,6 +106,27 @@ export async function POST(req: NextRequest) {
       score: aiSummary.score,
       analyzedAt: Timestamp.now(),
     })
+
+    // ─── 알림톡 발송 (score >= 70 && notifyEnabled) ───────────────
+    // 분석 결과 저장이 성공한 후 시도하며, 실패해도 응답에는 영향을 주지 않음
+    const settings = userData.settings ?? {}
+    if (aiSummary.score >= 70 && settings.notifyEnabled && settings.kakaoPhone) {
+      const deadline = noticeData.deadline?.toDate()
+      const daysLeft = deadline
+        ? Math.ceil((deadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+        : 0
+
+      sendKakaoNotification({
+        phone: settings.kakaoPhone,
+        title: noticeData.title,
+        estimatedAmount: noticeData.estimatedAmount,
+        deadline: deadline ? deadline.toLocaleDateString('ko-KR') : '미정',
+        daysLeft,
+        matchStatus,
+        oneLiner: aiSummary.oneLiner,
+        noticeId,
+      }).catch(err => console.error('[Kakao] 발송 실패(배경):', err))
+    }
 
     // ─── 쿼터 차감 (테스트 계정 스킵) ─────────────────────────
     const newCount = usage.count + 1

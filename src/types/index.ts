@@ -16,9 +16,9 @@ export interface CompanyProfile {
   revenue: number      // 최근 3년 평균 실적 (만원)
   headcount: number    // 직원 수
   region: string       // 주사업 지역
-  amountMin?: number   // [신규 추가] 참여 희망 최소금액 (만원)
-  amountMax?: number   // [신규 추가] 참여 희망 최대금액 (만원)
-  keywords?: string[]  // [신규 추가] 실적 키워드
+  amountMin?: number   // [신규] 참여 희망 최소금액 (만원)
+  amountMax?: number   // [신규] 참여 희망 최대금액 (만원)
+  keywords?: string[]  // [신규] 실적 키워드
 }
 
 // ─── 알림 설정 ────────────────────────────────────────────────

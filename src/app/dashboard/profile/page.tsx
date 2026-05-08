@@ -7,7 +7,6 @@ import type { CompanyProfile } from '@/types'
 
 const REGIONS = ['서울','경기','인천','부산','대구','광주','대전','울산','세종','강원','충북','충남','전북','전남','경북','경남','제주']
 
-// [신규 추가] 기본값: 최소 1,000만원 / 최대 10억(100,000만원)
 const EMPTY_PROFILE: CompanyProfile = {
   bizCodes: [],
   licenses: [],
@@ -23,7 +22,7 @@ function hasProfile(p: CompanyProfile) {
   return p.bizCodes.length > 0 || p.licenses.length > 0 || p.revenue > 0 || p.headcount > 0 || p.region
 }
 
-// [신규 추가] 완성도 계산 (7개 항목)
+// 프로필 완성도 계산 (7개 항목 기준)
 function calcCompletion(p: CompanyProfile): number {
   const filled = [
     p.bizCodes.length > 0,
@@ -37,7 +36,6 @@ function calcCompletion(p: CompanyProfile): number {
   return Math.round((filled / 7) * 100)
 }
 
-// [신규 추가] 완성도 멘트
 function completionMessage(pct: number): string {
   if (pct <= 40) return '프로필을 채울수록 정확한 공고를 추천받을 수 있어요'
   if (pct <= 70) return '조금만 더 채우면 매칭 정확도가 크게 올라가요!'
@@ -51,13 +49,12 @@ export default function ProfilePage() {
   const [saved, setSavedProfile] = useState<CompanyProfile | null>(null)
   const [bizInput, setBizInput] = useState('')
   const [licInput, setLicInput] = useState('')
-  const [kwInput, setKwInput] = useState('') // [신규 추가]
+  const [kwInput, setKwInput] = useState('')
   const [saving, setSaving] = useState(false)
   const [savedMsg, setSavedMsg] = useState(false)
 
   useEffect(() => {
     if (userDoc?.profile) {
-      // [신규 추가] 저장된 프로필에 신규 필드 없으면 기본값 병합
       const merged: CompanyProfile = {
         ...EMPTY_PROFILE,
         ...userDoc.profile,
@@ -92,19 +89,17 @@ export default function ProfilePage() {
     } finally { setSaving(false) }
   }
 
-  // [신규 추가] 완성도
   const completion = calcCompletion(form)
   const completionColor = completion === 100 ? '#4ade80' : completion > 70 ? '#006B7A' : completion > 40 ? '#facc15' : 'rgba(255,255,255,0.3)'
 
   return (
     <div className="p-8 max-w-2xl space-y-6">
-      {/* 헤더 */}
       <div className="mb-2">
         <h1 className="text-2xl font-bold text-white">회사 프로필</h1>
         <p className="text-white/40 text-sm mt-1">정확한 프로필을 입력할수록 AI 매칭 정확도가 높아집니다.</p>
       </div>
 
-      {/* [신규 추가] 프로필 완성도 게이지 */}
+      {/* 프로필 완성도 게이지 */}
       <div
         className="rounded-2xl p-5"
         style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
@@ -168,7 +163,7 @@ export default function ProfilePage() {
                 </div>
               </ProfileItem>
             )}
-            {/* [신규 추가] 실적 키워드 표시 */}
+            {/* 실적 키워드 표시 */}
             {(saved.keywords?.length ?? 0) > 0 && (
               <ProfileItem label="실적 키워드">
                 <div className="flex flex-wrap gap-1.5 mt-1.5">
@@ -200,7 +195,6 @@ export default function ProfilePage() {
                   <p className="text-white font-semibold text-sm">{saved.region}</p>
                 </div>
               )}
-              {/* [신규 추가] 금액 범위 표시 */}
               {((saved.amountMin ?? 0) > 0 || (saved.amountMax ?? 0) > 0) && (
                 <div>
                   <p className="text-white/35 text-xs mb-1">희망 금액</p>
@@ -292,7 +286,7 @@ export default function ProfilePage() {
           </select>
         </Field>
 
-        {/* [신규 추가] 참여 희망 금액 범위 */}
+        {/* 참여 희망 금액 범위 */}
         <Field label="참여 희망 금액 범위" hint="이 범위 밖의 공고는 추천에서 제외됩니다">
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -325,15 +319,15 @@ export default function ProfilePage() {
           )}
         </Field>
 
-        {/* [신규 추가] 실적 키워드 */}
-        <Field label="실적 키워드" hint="실제 납품/수행 경험이 있는 업무를 입력하면 매칭 정확도가 올라갑니다">
+        {/* 실적 키워드 */}
+        <Field label="실적 키워드" hint="실제 수행 경험 업무를 입력하세요. 공고 검색과 AI 매칭 점수에 모두 반영됩니다">
           <div className="flex gap-2">
             <input
               type="text"
               value={kwInput}
               onChange={e => setKwInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag('keywords', kwInput, setKwInput) } }}
-              placeholder="예: 영상제작, 홍보물, 도로포장"
+              placeholder="예: 영상제작, SW개발, 도로포장"
               className="flex-1 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 outline-none focus:ring-1 focus:ring-blue-500/50"
               style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
             />
@@ -378,7 +372,6 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   )
 }
 
-// [신규 추가] color prop으로 태그 스타일 분기
 function TagList({ tags, onRemove, color = 'teal' }: { tags: string[]; onRemove: (v: string) => void; color?: 'teal' | 'white' | 'yellow' }) {
   if (!tags.length) return null
 
