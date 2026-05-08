@@ -14,7 +14,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, adminAuth, requireAuth } from '@/lib/firebase-admin'
 import { analyzeNoticeWithAI } from '@/lib/ai-analysis'
-import type { CompanyProfile, Plan, AiUsage } from '@/types'
+import type { CompanyProfile, Plan } from '@/types'
 import type { G2BNoticeItem } from '@/lib/g2b'
 import { Timestamp } from 'firebase-admin/firestore'
 import { sendKakaoNotification } from '@/lib/kakao'
