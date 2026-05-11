@@ -100,6 +100,53 @@ export default function SettingsPage() {
           </button>
         </div>
 
+        {/* 구독 관리 */}
+        <div
+          className="rounded-2xl p-6 space-y-4"
+          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+        >
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-white">구독 정보</h3>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${userDoc?.subscription?.plan !== 'free' ? 'bg-[#006B7A]/20 text-[#5BBCCA]' : 'bg-white/10 text-white/40'}`}>
+              {userDoc?.subscription?.plan?.toUpperCase() ?? 'FREE'}
+            </span>
+          </div>
+          
+          <div className="space-y-2.5">
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-white/30">현재 플랜</span>
+              <span className="text-white/80 font-medium">
+                {userDoc?.subscription?.plan === 'pro' ? 'Professional' : userDoc?.subscription?.plan === 'enterprise' ? 'Enterprise' : 'Starter (Free)'}
+              </span>
+            </div>
+            {userDoc?.subscription?.paidUntil && (
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-white/30">다음 결제일</span>
+                <span className="text-white/80 font-medium">
+                  {userDoc.subscription.paidUntil.toDate().toLocaleDateString('ko-KR')}
+                </span>
+              </div>
+            )}
+          </div>
+          
+          {userDoc?.subscription?.plan === 'free' ? (
+            <a 
+              href="/#pricing" 
+              className="block w-full text-center py-3 rounded-xl text-sm font-bold text-white transition-all"
+              style={{ background: '#006B7A' }}
+            >
+              플랜 업그레이드 하기
+            </a>
+          ) : (
+            <button 
+              onClick={() => alert('구독 해지 기능은 고객센터로 문의해주세요.')}
+              className="w-full py-3 rounded-xl text-sm font-medium text-white/40 border border-white/10 hover:bg-white/5 transition-all"
+            >
+              구독 해지 예약
+            </button>
+          )}
+        </div>
+
         {/* 플랜 안내 */}
         <div
           className="rounded-2xl p-5"
