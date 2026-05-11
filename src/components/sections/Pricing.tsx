@@ -26,7 +26,7 @@ export default function Pricing() {
     setLoadingPlan(planId)
 
     try {
-      // @ts-expect-error
+      // @ts-expect-error: TossPayments is loaded via external script
       const tossPayments = window.TossPayments(TOSS_CLIENT_KEY)
       const orderId = `${planId}_${user.uid}_${Date.now()}`
       
