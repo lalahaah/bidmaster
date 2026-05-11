@@ -26,7 +26,7 @@ export default function Pricing() {
     setLoadingPlan(planId)
 
     try {
-      // @ts-ignore
+      // @ts-expect-error
       const tossPayments = window.TossPayments(TOSS_CLIENT_KEY)
       const orderId = `${planId}_${user.uid}_${Date.now()}`
       

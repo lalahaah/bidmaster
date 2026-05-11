@@ -47,7 +47,7 @@ export default function PaymentSuccessPage() {
           setStatus('error')
           setErrorMsg(data.error || '결제 승인 중 오류가 발생했습니다.')
         }
-      } catch (err) {
+      } catch {
         setStatus('error')
         setErrorMsg('서버와 통신 중 오류가 발생했습니다.')
       }

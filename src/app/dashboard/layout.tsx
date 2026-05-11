@@ -127,7 +127,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="flex items-center justify-between mb-2">
               <span className="text-white/40 text-[10px] uppercase font-bold tracking-wider">현재 플랜</span>
               {(() => {
-                const plan = (userDoc as any)?.subscription?.plan ?? 'free'
+                const plan = userDoc?.subscription?.plan ?? 'free'
                 if (plan === 'pro') return <span className="text-[10px] font-bold text-[#5BBCCA]">Pro ✓</span>
                 if (plan === 'enterprise') return <span className="text-[10px] font-bold text-[#facc15]">Enterprise ✓</span>
                 return <span className="text-[10px] font-bold text-white/30">Free</span>

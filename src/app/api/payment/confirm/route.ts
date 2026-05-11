@@ -58,8 +58,9 @@ export async function POST(req: NextRequest) {
     })
 
     return NextResponse.json({ success: true, plan })
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '서버 오류가 발생했습니다.'
     console.error('Payment Confirmation Error:', error)
-    return NextResponse.json({ error: error.message || '서버 오류가 발생했습니다.' }, { status: 500 })
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
