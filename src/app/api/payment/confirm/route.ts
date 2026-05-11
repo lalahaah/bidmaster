@@ -5,6 +5,20 @@ export async function POST(req: NextRequest) {
   try {
     const { paymentKey, orderId, amount, plan } = await req.json()
 
+    // 0. 결제 정보 검증 (보안 강화)
+    const VALID_PLANS: Record<string, number> = {
+      pro: 29000,
+      enterprise: 99000,
+    }
+
+    if (!VALID_PLANS[plan]) {
+      return NextResponse.json({ error: '유효하지 않은 요금제입니다.' }, { status: 400 })
+    }
+
+    if (Number(amount) !== VALID_PLANS[plan]) {
+      return NextResponse.json({ error: '결제 금액이 일치하지 않습니다.' }, { status: 400 })
+    }
+
     // 1. 토스페이먼츠 결제 승인 API 호출
     const secretKey = process.env.TOSS_SECRET_KEY
     const basicToken = Buffer.from(`${secretKey}:`).toString('base64')
