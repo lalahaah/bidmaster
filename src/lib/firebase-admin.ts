@@ -9,7 +9,8 @@ import { getAuth, Auth } from 'firebase-admin/auth'
 import { type NextRequest, NextResponse } from 'next/server'
 
 function getAdminApp(): App {
-  if (getApps().length > 0) return getApps()[0]
+  const apps = getApps()
+  if (apps.length > 0) return apps[0]
 
   const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_JSON
   if (serviceAccount) {
@@ -19,6 +20,7 @@ function getAdminApp(): App {
     })
   }
 
+  // 개별 환경변수 사용
   return initializeApp({
     credential: cert({
       projectId:   process.env.FIREBASE_ADMIN_PROJECT_ID ?? process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
@@ -29,40 +31,13 @@ function getAdminApp(): App {
   })
 }
 
-let adminAppInstance: App | undefined
-let adminDbInstance: Firestore | undefined
-let adminAuthInstance: Auth | undefined
-
-function initializeAdmin() {
-  if (adminAppInstance) return
-  try {
-    adminAppInstance = getAdminApp()
-    adminDbInstance = getFirestore(adminAppInstance)
-    adminAuthInstance = getAuth(adminAppInstance)
-  } catch (err) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.warn('Firebase Admin initialization deferred:', err)
-    }
-  }
-}
-
-export const adminDb = new Proxy({} as Firestore, {
-  get(_target: Firestore, prop: PropertyKey) {
-    initializeAdmin()
-    return adminDbInstance?.[prop as keyof Firestore]
-  },
-})
-
-export const adminAuth = new Proxy({} as Auth, {
-  get(_target: Auth, prop: PropertyKey) {
-    initializeAdmin()
-    return adminAuthInstance?.[prop as keyof Auth]
-  },
-})
+// 싱글톤 인스턴스 직접 생성
+const adminApp = getAdminApp()
+export const adminDb: Firestore = getFirestore(adminApp)
+export const adminAuth: Auth = getAuth(adminApp)
 
 export async function verifyIdToken(token: string) {
-  initializeAdmin()
-  return adminAuthInstance!.verifyIdToken(token)
+  return adminAuth.verifyIdToken(token)
 }
 
 /** Bearer 토큰 추출 + 검증. 실패 시 401 NextResponse 반환. */
@@ -78,4 +53,3 @@ export async function requireAuth(
     return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
   }
 }
-

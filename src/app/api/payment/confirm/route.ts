@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Firestore 유저 구독 정보 업데이트
+    // adminDb는 src/lib/firebase-admin.ts에서 싱글톤 Firestore 인스턴스로 export됨
     const userRef = adminDb.collection('users').doc(uid)
     
     // 결제 성공 시각 및 만료 시각 계산 (1개월)
