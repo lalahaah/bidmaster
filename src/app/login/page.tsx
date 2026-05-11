@@ -54,7 +54,6 @@ function LoginContent() {
         if (password.length < 6) { setError('비밀번호는 6자 이상이어야 합니다.'); setIsSubmitting(false); return }
         await signUpWithEmail(email, password, name)
       }
-      document.cookie = 'bidmaster_session=1; path=/; max-age=86400'
       router.replace(redirect)
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? ''

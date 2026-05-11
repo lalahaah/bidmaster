@@ -61,6 +61,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(firebaseUser)
 
       if (firebaseUser) {
+        // 미들웨어용 쿠키 설정
+        document.cookie = 'bidmaster_session=1; path=/; max-age=86400'
+        
         let doc = await getUserDoc(firebaseUser.uid)
 
         // 최초 로그인 시 사용자 문서 생성
@@ -76,6 +79,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         setUserDoc(doc)
       } else {
+        // 미들웨어용 쿠키 삭제
+        document.cookie = 'bidmaster_session=; path=/; max-age=0'
         setUserDoc(null)
       }
 

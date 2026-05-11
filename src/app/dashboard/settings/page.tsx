@@ -105,7 +105,10 @@ export default function SettingsPage() {
           className="rounded-2xl p-5"
           style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}
         >
-          <p className="text-white/50 text-xs font-medium mb-3">플랜별 알림 제한</p>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-white/50 text-xs font-medium">플랜별 알림 제한</p>
+            <a href="/dashboard/subscription" className="text-[#006B7A] text-xs font-bold hover:underline">플랜 변경하기 →</a>
+          </div>
           <div className="grid grid-cols-3 gap-3">
             {[
               { plan: 'Free', limit: '일 3건', color: 'rgba(255,255,255,0.1)' },

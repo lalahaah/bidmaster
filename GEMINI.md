@@ -86,6 +86,7 @@ bid_notices/{bidNtceNo}:
   createdAt, analyzedAt: timestamp
 
 ## 완성된 주요 기능
+- **구독 결제 (토스페이먼츠)**: Pro/Enterprise 플랜 결제 및 자동 권한 부여 구현 완료
 - **카카오 알림톡 (알리고 API)**: score >= 70 및 알림 설정 시 자동 발송 (LMS)
 - **자동 공고 수집 (Vercel Cron)**: 매일 08:00 KST (23:00 UTC) 실행
 - **프로필 상세화**: 참여 희망 금액 범위, 실적 키워드, 프로필 완성도 게이지
@@ -93,17 +94,18 @@ bid_notices/{bidNtceNo}:
 
 ## 미완성 기능 (우선순위 순)
 
-### P2 — 구독 결제 (토스페이먼츠)
-- 플랜: free / pro(₩29,000) / enterprise(₩99,000)
-- 위치: src/app/api/payment/ (신규)
-- Free: 기본 검색, 스크랩 10개
-- Pro: AI 분석 무제한, 카카오 알림 무제한
-- Enterprise: 팀 계정 5명, 경쟁사 분석
-
 ### P2 — 플랜별 기능 제한
 - Firestore users/{uid}/subscription.plan 기준 분기
-- AI 분석 월 한도 (Free: 0, Pro: 무제한)
-- 현재 대시보드에 remaining/isTestAccount 로직 일부 있음 → 정식 구독으로 교체
+- AI 분석 월 한도 (Free: 0, Pro: 무제한) -> 현재 일부 적용됨 (3건/100건/500건)
+- 현재 대시보드에 remaining/isTestAccount 로직 일부 있음 → 정식 구독으로 교체 중
+
+### P2 — 팀 관리 (Enterprise)
+- Enterprise 플랜 사용자를 위한 팀원 초대 및 관리 기능
+- Firestore `users/{uid}/team` 컬렉션 또는 필드 활용
+
+### P3 — 결제 관리 및 해지
+- 현재 결제 내역 조회 및 구독 해지 기능 미구현
+- Toss Payments 빌링 키를 이용한 정기 결제 (현재는 단건 결제 기반 1개월 수동 갱신 구조)
 
 ## 작업 시 주의사항
 1. Firebase Admin SDK는 서버(API Route)에서만 사용

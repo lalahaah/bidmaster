@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { getUserAnalyses } from '@/lib/firestore'
 import { auth } from '@/lib/firebase'
@@ -61,8 +62,10 @@ function sortNotices(list: EnrichedNotice[], key: SortKey): EnrichedNotice[] {
   }
 }
 
-export default function DashboardPage() {
+function DashboardContent() {
   const { userDoc, user, refreshUserDoc } = useAuth()
+  const searchParams = useSearchParams()
+  const [showWelcome, setShowWelcome] = useState(searchParams.get('welcome') === 'true')
   const [notices, setNotices] = useState<EnrichedNotice[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMsg, setLoadingMsg] = useState('공고 불러오는 중...')
@@ -133,6 +136,31 @@ export default function DashboardPage() {
 
   return (
     <div className="p-8">
+      {/* 웰컴 알림 */}
+      {showWelcome && (
+        <div 
+          className="mb-8 p-6 rounded-2xl flex items-center justify-between animate-in fade-in slide-in-from-top-4 duration-500"
+          style={{ 
+            background: 'linear-gradient(135deg, #006B7A, #005a69)', 
+            boxShadow: '0 8px 32px rgba(0,107,122,0.25)' 
+          }}
+        >
+          <div className="flex items-center gap-4">
+            <span className="text-3xl">🎉</span>
+            <div>
+              <h2 className="text-white font-bold text-lg">구독해 주셔서 감사합니다!</h2>
+              <p className="text-white/70 text-sm">이제 모든 AI 기능을 무제한으로 이용하실 수 있습니다.</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => setShowWelcome(false)}
+            className="text-white/50 hover:text-white transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* 헤더 */}
       <div className="mb-8 flex items-start justify-between">
         <div>
@@ -224,12 +252,13 @@ export default function DashboardPage() {
             <p className="text-white font-medium text-sm">무료 체험 중 ({remaining}건 남음)</p>
             <p className="text-white/45 text-xs mt-0.5">Pro 플랜으로 업그레이드하면 월 100건 AI 분석이 가능합니다.</p>
           </div>
-          <button
+          <a
+            href="/#pricing"
             className="px-4 py-2 rounded-lg text-sm font-semibold text-white shrink-0 ml-4"
             style={{ background: '#006B7A' }}
           >
             업그레이드
-          </button>
+          </a>
         </div>
       )}
 
@@ -518,3 +547,16 @@ function InfoRow({ label, value }: { label: string; value: string }) {
     </div>
   )
 }
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="p-8">
+        <div className="w-8 h-8 rounded-full border-2 border-blue-500/20 border-t-blue-500 animate-spin mx-auto mt-20" />
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
+  )
+}
+

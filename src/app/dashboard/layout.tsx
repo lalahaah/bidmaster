@@ -12,7 +12,8 @@ const NAV_ITEMS = [
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading, signOut } = useAuth()
+  // useAuth에서 userDoc을 가져옵니다.
+  const { user, userDoc, loading, signOut } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
 
@@ -31,7 +32,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (!user) return null
 
   const handleSignOut = async () => {
-    document.cookie = 'bidmaster_session=; path=/; max-age=0'
     await signOut()
     router.replace('/')
   }
@@ -116,6 +116,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           >
             로그아웃
           </button>
+        </div>
+
+        {/* 플랜 뱃지 */}
+        <div className="px-3 pb-6 mt-auto">
+          <div 
+            className="p-4 rounded-2xl" 
+            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-white/40 text-[10px] uppercase font-bold tracking-wider">현재 플랜</span>
+              {(() => {
+                const plan = (userDoc as any)?.subscription?.plan ?? 'free'
+                if (plan === 'pro') return <span className="text-[10px] font-bold text-[#5BBCCA]">Pro ✓</span>
+                if (plan === 'enterprise') return <span className="text-[10px] font-bold text-[#facc15]">Enterprise ✓</span>
+                return <span className="text-[10px] font-bold text-white/30">Free</span>
+              })()}
+            </div>
+            <Link 
+              href="/#pricing" 
+              className="block w-full text-center py-2 rounded-lg text-[11px] font-bold text-white/60 hover:text-white transition-colors"
+              style={{ background: 'rgba(255,255,255,0.05)' }}
+            >
+              업그레이드 하기 →
+            </Link>
+          </div>
         </div>
       </aside>
 
