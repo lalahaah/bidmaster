@@ -198,8 +198,6 @@ export async function GET(req: NextRequest) {
 
     // ── 필터링 로직 ──
     let matched: NoticeDoc[] = []
-    const keywords = profile.keywords ?? []
-    const bizCodes = profile.bizCodes ?? []
 
     if (showAll) {
       matched = allNotices
