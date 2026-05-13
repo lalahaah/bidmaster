@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext'
 const NAV_ITEMS = [
   { href: '/dashboard', icon: '📊', label: '대시보드' },
   { href: '/dashboard/profile', icon: '🏢', label: '회사 프로필' },
+  { href: '/dashboard/team', icon: '👥', label: '팀 관리' },
   { href: '/dashboard/settings', icon: '⚙️', label: '알림 설정' },
 ]
 

@@ -40,21 +40,34 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const [userSnap, noticeSnap] = await Promise.all([
-      adminDb.collection('users').doc(uid).get(),
+    const userSnap = await adminDb.collection('users').doc(uid).get()
+    if (!userSnap.exists) {
+      return NextResponse.json({ error: '회원 정보를 찾을 수 없습니다.' }, { status: 400 })
+    }
+    const userData = userSnap.data()!
+
+    // ── 팀 멤버면 소유자의 데이터 사용 ────────────────────────
+    let ownerUid = uid
+    let ownerData = userData
+
+    if (userData.role === 'member' && userData.teamId) {
+      ownerUid = userData.teamId
+      const ownerSnap = await adminDb.collection('users').doc(ownerUid).get()
+      if (ownerSnap.exists) {
+        ownerData = ownerSnap.data()!
+      }
+    }
+
+    const [noticeSnap] = await Promise.all([
       adminDb.collection('bid_notices').doc(noticeId).get(),
     ])
 
-    if (!userSnap.exists) {
-      return NextResponse.json({ error: '회사 프로필을 먼저 등록해주세요.' }, { status: 400 })
-    }
     if (!noticeSnap.exists) {
       return NextResponse.json({ error: '공고를 찾을 수 없습니다.' }, { status: 404 })
     }
 
-    const userData = userSnap.data()!
-    const profile = userData.profile as CompanyProfile
-    const plan: Plan = userData.subscription?.plan ?? 'free'
+    const profile = ownerData.profile as CompanyProfile
+    const plan: Plan = ownerData.subscription?.plan ?? 'free'
     const authUser = await adminAuth.getUser(uid)
     const isTestAccount = TEST_ACCOUNTS.includes(authUser.email ?? '')
 
@@ -62,17 +75,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '업종코드를 등록해야 매칭이 가능합니다.' }, { status: 400 })
     }
 
-    // ─── 쿼터 확인 (테스트 계정 스킵) ─────────────────────────
+    // ─── 쿼터 확인 (소유자 쿼터 차감) ─────────────────────────
     const now = new Date()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let usage: any = userData.aiUsage ?? { count: 0, resetAt: Timestamp.fromDate(now) }
+    let usage: any = ownerData.aiUsage ?? { count: 0, resetAt: Timestamp.fromDate(now) }
 
     if (!isTestAccount) {
       // 리셋 시점이 지났으면 초기화
       if (usage.resetAt.toDate() <= now) {
         const nextReset = new Date(now.getFullYear(), now.getMonth() + 1, 1)
         usage = { count: 0, resetAt: Timestamp.fromDate(nextReset) }
-        await adminDb.collection('users').doc(uid).update({ aiUsage: usage })
+        await adminDb.collection('users').doc(ownerUid).update({ aiUsage: usage })
       }
 
       const remaining = QUOTA[plan] - usage.count
@@ -98,18 +111,19 @@ export async function POST(req: NextRequest) {
 
     const { aiSummary, matchStatus } = await analyzeNoticeWithAI(profile, raw)
 
-    // 유저별 분석 결과 저장 (글로벌이 아닌 개인 서브컬렉션)
-    await adminDb.collection('users').doc(uid).collection('analyses').doc(noticeId).set({
+    // 유저별 분석 결과 저장 (개인 서브컬렉션 - 팀이면 소유자와 공유?)
+    // 요청: "분석 결과를 공유" -> 소유자의 analyses 서브컬렉션에 저장하고 공유
+    await adminDb.collection('users').doc(ownerUid).collection('analyses').doc(noticeId).set({
       noticeId,
       aiSummary,
       matchStatus,
       score: aiSummary.score,
       analyzedAt: Timestamp.now(),
+      analyzedBy: uid // 누가 분석했는지 기록
     })
 
-    // ─── 알림톡 발송 (score >= 70 && notifyEnabled) ───────────────
-    // 분석 결과 저장이 성공한 후 시도하며, 실패해도 응답에는 영향을 주지 않음
-    const settings = userData.settings ?? {}
+    // ─── 알림톡 발송 (소유자 설정 기준) ───────────────────────────
+    const settings = ownerData.settings ?? {}
     if (aiSummary.score >= 70 && settings.notifyEnabled && settings.kakaoPhone) {
       const deadline = noticeData.deadline?.toDate()
       const daysLeft = deadline
@@ -128,10 +142,10 @@ export async function POST(req: NextRequest) {
       }).catch(err => console.error('[Kakao] 발송 실패(배경):', err))
     }
 
-    // ─── 쿼터 차감 (테스트 계정 스킵) ─────────────────────────
+    // ─── 쿼터 차감 (소유자 쿼터) ──────────────────────────────
     const newCount = usage.count + 1
     if (!isTestAccount) {
-      await adminDb.collection('users').doc(uid).update({ 'aiUsage.count': newCount })
+      await adminDb.collection('users').doc(ownerUid).update({ 'aiUsage.count': newCount })
     }
 
     return NextResponse.json({

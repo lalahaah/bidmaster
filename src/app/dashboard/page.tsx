@@ -93,9 +93,11 @@ function DashboardContent() {
       const currentPage = isMore ? page + 1 : 1
       const url = `/api/notices/personalized?page=${currentPage}&limit=50${activeTab === 'all' ? '&all=true' : ''}`
       
+      const ownerUid = userDoc?.role === 'member' && userDoc?.teamId ? userDoc.teamId : user.uid
+
       const [res, analyses] = await Promise.all([
         fetch(url, { headers: { Authorization: `Bearer ${token}` } }),
-        getUserAnalyses(user.uid),
+        getUserAnalyses(ownerUid),
       ])
       
       const data = await res.json()

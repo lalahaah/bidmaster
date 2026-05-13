@@ -51,8 +51,19 @@ export interface UserDocument {
   settings: NotificationSettings
   subscription: Subscription
   aiUsage: AiUsage
+  teamId: string | null     // [신규] 소속된 팀의 소유자 UID
+  role: 'owner' | 'member' | null // [신규] 팀 내 역할
   createdAt: Timestamp
   updatedAt: Timestamp
+}
+
+// ─── 팀 멤버 (users/{ownerUid}/team_members/{memberUid}) ──────
+export interface TeamMember {
+  uid: string
+  email: string
+  displayName: string
+  photoURL: string | null
+  joinedAt: Timestamp
 }
 
 // ─── AI 분석 요약 ────────────────────────────────────────────

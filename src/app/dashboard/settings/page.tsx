@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { updateNotificationSettings } from '@/lib/firestore'
+import { auth } from '@/lib/firebase'
 import type { NotificationSettings } from '@/types'
 
 export default function SettingsPage() {
@@ -10,8 +11,25 @@ export default function SettingsPage() {
   const [form, setForm] = useState<NotificationSettings>({ kakaoPhone: '', scoreThreshold: 70, notifyEnabled: false })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [history, setHistory] = useState<any[]>([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
 
   useEffect(() => { if (userDoc?.settings) setForm(userDoc.settings) }, [userDoc])
+
+  const fetchHistory = useCallback(async () => {
+    if (!user) return
+    setLoadingHistory(true)
+    try {
+      const token = await auth!.currentUser!.getIdToken()
+      const res = await fetch('/api/payment/history', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const data = await res.json()
+      if (res.ok) setHistory(data.history || [])
+    } finally { setLoadingHistory(false) }
+  }, [user])
+
+  useEffect(() => { fetchHistory() }, [fetchHistory])
 
   const handleSave = async () => {
     if (!user) return
@@ -144,6 +162,43 @@ export default function SettingsPage() {
             >
               구독 해지 예약
             </button>
+          )}
+        </div>
+
+        {/* 결제 내역 */}
+        <div
+          className="rounded-2xl p-6 space-y-4"
+          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+        >
+          <h3 className="text-sm font-semibold text-white">결제 내역</h3>
+          
+          {loadingHistory ? (
+            <div className="py-10 flex justify-center">
+              <div className="w-5 h-5 rounded-full border-2 border-white/10 border-t-white/40 animate-spin" />
+            </div>
+          ) : history.length === 0 ? (
+            <p className="text-center py-10 text-white/20 text-xs">결제 내역이 없습니다.</p>
+          ) : (
+            <div className="space-y-3">
+              {history.map((item) => (
+                <div key={item.id} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
+                  <div>
+                    <p className="text-white text-sm font-medium">
+                      {item.plan === 'pro' ? 'Professional' : 'Enterprise'} 플랜
+                    </p>
+                    <p className="text-white/30 text-[10px] mt-0.5">
+                      {item.approvedAt ? new Date(item.approvedAt).toLocaleDateString('ko-KR') : '-'} · {item.method}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-white font-bold text-sm">
+                      ₩{item.amount?.toLocaleString()}
+                    </p>
+                    <span className="text-[10px] text-green-500/80 font-medium">결제 완료</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
 

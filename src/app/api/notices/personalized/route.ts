@@ -158,7 +158,20 @@ export async function GET(req: NextRequest) {
   try {
     const userSnap = await adminDb.collection('users').doc(uid).get()
     const userData = userSnap.data() ?? {}
-    const profile = (userData.profile ?? {}) as CompanyProfile
+    
+    // ── 팀 멤버면 소유자의 프로필 사용 ────────────────────────
+    let profileOwnerUid = uid
+    let profileUserData = userData
+
+    if (userData.role === 'member' && userData.teamId) {
+      profileOwnerUid = userData.teamId
+      const ownerSnap = await adminDb.collection('users').doc(profileOwnerUid).get()
+      if (ownerSnap.exists) {
+        profileUserData = ownerSnap.data() || {}
+      }
+    }
+
+    const profile = (profileUserData.profile ?? {}) as CompanyProfile
 
     // ── 텍스트 프로필 있으면 G2B 키워드 검색 (1시간 캐시) ───
     const keywords = profile.keywords ?? []

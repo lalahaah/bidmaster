@@ -52,7 +52,6 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Firestore 유저 구독 정보 업데이트
-    // adminDb는 src/lib/firebase-admin.ts에서 싱글톤 Firestore 인스턴스로 export됨
     const userRef = adminDb.collection('users').doc(uid)
     
     // 결제 성공 시각 및 만료 시각 계산 (1개월)
@@ -60,7 +59,10 @@ export async function POST(req: NextRequest) {
     const paidUntil = new Date()
     paidUntil.setMonth(now.getMonth() + 1)
 
-    await userRef.update({
+    const batch = adminDb.batch()
+
+    // 유저 문서 업데이트
+    batch.update(userRef, {
       'subscription.plan': plan,
       'subscription.paidUntil': paidUntil,
       'subscription.updatedAt': now,
@@ -71,6 +73,21 @@ export async function POST(req: NextRequest) {
         approvedAt: confirmData.approvedAt,
       }
     })
+
+    // 결제 내역 서브컬렉션에 추가
+    const paymentRef = userRef.collection('payments').doc(orderId)
+    batch.set(paymentRef, {
+      paymentKey,
+      orderId,
+      amount: Number(amount),
+      plan,
+      approvedAt: confirmData.approvedAt,
+      method: confirmData.method || '카드',
+      status: 'DONE',
+      createdAt: now,
+    })
+
+    await batch.commit()
 
     return NextResponse.json({ success: true, plan })
   } catch (error) {
