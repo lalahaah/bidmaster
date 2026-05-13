@@ -13,6 +13,26 @@ import { adminDb } from '@/lib/firebase-admin'
 import { fetchBidNoticesByKeyword, parseAmountToManwon, parseG2BDate, G2BNoticeItem } from '@/lib/g2b'
 
 export async function GET(req: NextRequest) {
+  const url = new URL(req.url)
+  const testKeyword = url.searchParams.get('test')
+
+  // 테스트 모드 로직
+  if (testKeyword) {
+    try {
+      const items = await fetchBidNoticesByKeyword(testKeyword)
+      return NextResponse.json({
+        keyword: testKeyword,
+        totalCount: items.length,
+        items: items.slice(0, 3).map(item => ({
+          title: item.bidNtceNm,
+          org: item.ntceInsttNm
+        }))
+      })
+    } catch (err) {
+      return NextResponse.json({ error: String(err) }, { status: 500 })
+    }
+  }
+
   // Cron 인증 확인
   const authHeader = req.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
