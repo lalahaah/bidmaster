@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { auth } from '@/lib/firebase'
@@ -162,7 +163,7 @@ export default function TeamPage() {
               <div key={member.uid} className="px-6 py-4 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   {member.photoURL ? (
-                    <img src={member.photoURL} alt="" className="w-10 h-10 rounded-full" />
+                    <Image src={member.photoURL} alt="" width={40} height={40} className="w-10 h-10 rounded-full" />
                   ) : (
                     <div className="w-10 h-10 rounded-full bg-[#006B7A] flex items-center justify-center font-bold text-white">
                       {member.displayName?.[0] || member.email[0].toUpperCase()}

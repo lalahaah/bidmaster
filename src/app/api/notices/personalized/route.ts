@@ -24,7 +24,11 @@ const ENDPOINTS = [
   'getBidPblancListInfoEtc',     // 기타
 ]
 
-type NoticeDoc = Record<string, unknown>
+type NoticeDoc = {
+  title?: string
+  bizCode?: string
+  [key: string]: unknown
+}
 
 // ──────────────────────────────────────────────────────────────
 // G2B 검색 → Firestore 저장 (신규만)

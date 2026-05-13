@@ -142,9 +142,6 @@ function DashboardContent() {
   const analyzed = notices.filter(n => n.aiSummary).length
   const possible = notices.filter(n => n.matchStatus === '가능').length
   const conditional = notices.filter(n => n.matchStatus === '조건부').length
-  const avgScore = analyzed > 0
-    ? Math.round(notices.filter(n => n.aiSummary).reduce((s, n) => s + (n.aiSummary?.score ?? 0), 0) / analyzed)
-    : 0
 
   const unanalyzedCount = notices.filter(n => n.matchStatus === '미분석').length
 

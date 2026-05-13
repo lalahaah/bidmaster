@@ -6,12 +6,20 @@ import { updateNotificationSettings } from '@/lib/firestore'
 import { auth } from '@/lib/firebase'
 import type { NotificationSettings } from '@/types'
 
+interface PaymentHistory {
+  id: string
+  plan: string
+  approvedAt: string
+  method: string
+  amount: number
+}
+
 export default function SettingsPage() {
   const { user, userDoc, refreshUserDoc } = useAuth()
   const [form, setForm] = useState<NotificationSettings>({ kakaoPhone: '', scoreThreshold: 70, notifyEnabled: false })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [history, setHistory] = useState<any[]>([])
+  const [history, setHistory] = useState<PaymentHistory[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
 
   useEffect(() => { if (userDoc?.settings) setForm(userDoc.settings) }, [userDoc])

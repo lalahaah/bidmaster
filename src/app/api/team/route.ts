@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   try {
     const userSnap = await adminDb.collection('users').doc(uid).get()
     const userData = userSnap.data()
-    if (!userSnap.exists) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    if (!userSnap.exists || !userData) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
     const teamId = userData.role === 'owner' ? uid : (userData.teamId || uid)
     const isOwner = userData.subscription?.plan === 'enterprise' && !userData.teamId
