@@ -68,6 +68,8 @@ export async function createUserDoc(
         const d = new Date(); d.setMonth(d.getMonth() + 1, 1); d.setHours(0, 0, 0, 0); return d
       })()),
     },
+    teamId: null,
+    role: null,
     createdAt: now,
     updatedAt: now,
   }
