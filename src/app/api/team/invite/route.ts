@@ -22,6 +22,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Enterprise 플랜 사용자만 팀원 초대가 가능합니다.' }, { status: 403 })
     }
 
+    // 1.5. 팀원 수 제한 확인 (최대 5명)
+    const membersSnap = await adminDb.collection('users').doc(uid).collection('team_members').get()
+    if (membersSnap.size >= 5) {
+      return NextResponse.json({ error: '팀원은 최대 5명까지 초대할 수 있습니다.' }, { status: 400 })
+    }
+
     // 2. 초대할 사용자 찾기
     const userRecord = await adminAuth.getUserByEmail(email).catch(() => null)
     if (!userRecord) {
