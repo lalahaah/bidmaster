@@ -72,15 +72,17 @@ function DashboardContent() {
   const [selected, setSelected] = useState<EnrichedNotice | null>(null)
   const [isPersonalized, setIsPersonalized] = useState(false)
   const [sortKey, setSortKey] = useState<SortKey>('relevance')
+  const [activeTab, setActiveTab] = useState<'personalized' | 'all'>('personalized')
 
   const loadNotices = useCallback(async () => {
     if (!user) return
     setLoading(true)
-    setLoadingMsg('나라장터에서 맞춤 공고 검색 중...')
+    setLoadingMsg(activeTab === 'personalized' ? '내 프로필 맞춤 공고 검색 중...' : '전체 공고 불러오는 중...')
     try {
       const token = await auth!.currentUser!.getIdToken()
+      const url = `/api/notices/personalized${activeTab === 'all' ? '?all=true' : ''}`
       const [res, analyses] = await Promise.all([
-        fetch('/api/notices/personalized', {
+        fetch(url, {
           headers: { Authorization: `Bearer ${token}` },
         }),
         getUserAnalyses(user.uid),
@@ -102,7 +104,7 @@ function DashboardContent() {
       setLoading(false)
       setLoadingMsg('공고 불러오는 중...')
     }
-  }, [user])
+  }, [user, activeTab])
 
   useEffect(() => { loadNotices() }, [loadNotices])
 
@@ -271,39 +273,58 @@ function DashboardContent() {
           className="px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
           style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
         >
-          {/* 왼쪽: 타이틀 + 뱃지 */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-white font-semibold text-sm">공고 리스트</span>
-            {isPersonalized && (
-              <span className="text-xs px-2.5 py-1 rounded-full" style={{ background: 'rgba(104,213,133,0.1)', color: '#4ade80' }}>
-                내 프로필 맞춤
-              </span>
-            )}
-            {unanalyzedCount > 0 && (
-              <span className="text-xs px-2.5 py-1 rounded-full" style={{ background: 'rgba(234,179,8,0.15)', color: '#facc15' }}>
-                미분석 {unanalyzedCount}건
-              </span>
-            )}
-            <span className="text-xs px-2.5 py-1 rounded-full" style={{ background: 'rgba(0,107,122,0.15)', color: '#006B7A' }}>
-              {notices.length}건
-            </span>
+          {/* 왼쪽: 메인 탭 */}
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-black/20">
+            <button
+              onClick={() => setActiveTab('personalized')}
+              className="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2"
+              style={activeTab === 'personalized'
+                ? { background: 'rgba(0,107,122,0.2)', color: '#5BBCCA' }
+                : { color: 'rgba(255,255,255,0.4)' }
+              }
+            >
+              내 맞춤 공고
+              {activeTab === 'personalized' && !loading && (
+                <span className="text-[10px] bg-[#006B7A]/30 px-1.5 py-0.5 rounded-full">{notices.length}</span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('all')}
+              className="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2"
+              style={activeTab === 'all'
+                ? { background: 'rgba(255,255,255,0.1)', color: '#fff' }
+                : { color: 'rgba(255,255,255,0.4)' }
+              }
+            >
+              전체 공고
+              {activeTab === 'all' && !loading && (
+                <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded-full">{notices.length}</span>
+              )}
+            </button>
           </div>
 
-          {/* 오른쪽: 정렬 탭 */}
-          <div className="flex items-center gap-1">
-            {SORT_OPTIONS.map(opt => (
-              <button
-                key={opt.key}
-                onClick={() => setSortKey(opt.key)}
-                className="px-2.5 py-1 rounded-lg text-xs transition-all"
-                style={sortKey === opt.key
-                  ? { background: 'rgba(0,107,122,0.3)', color: '#5BBCCA', fontWeight: 600 }
-                  : { background: 'transparent', color: 'rgba(255,255,255,0.3)' }
-                }
-              >
-                {opt.label}
-              </button>
-            ))}
+          {/* 오른쪽: 정렬 및 정보 */}
+          <div className="flex items-center gap-3">
+            {unanalyzedCount > 0 && (
+              <span className="text-[10px] px-2 py-1 rounded-md bg-yellow-500/10 text-yellow-500 font-bold uppercase tracking-tight">
+                미분석 {unanalyzedCount}
+              </span>
+            )}
+            <div className="flex items-center gap-1 bg-white/5 p-1 rounded-lg">
+              {SORT_OPTIONS.map(opt => (
+                <button
+                  key={opt.key}
+                  onClick={() => setSortKey(opt.key)}
+                  className="px-2.5 py-1 rounded-md text-[11px] transition-all"
+                  style={sortKey === opt.key
+                    ? { background: 'rgba(0,107,122,0.3)', color: '#5BBCCA', fontWeight: 600 }
+                    : { background: 'transparent', color: 'rgba(255,255,255,0.3)' }
+                  }
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -316,7 +337,7 @@ function DashboardContent() {
           <div className="text-center py-20 text-white/25">
             <p className="text-4xl mb-3">📭</p>
             <p className="text-sm">
-              {isPersonalized
+              {activeTab === 'personalized'
                 ? '프로필에 맞는 공고가 없습니다. 희망 금액 범위나 키워드를 조정해보세요.'
                 : '아직 수집된 공고가 없습니다.'}
             </p>
