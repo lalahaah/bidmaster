@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
     // 1. 유저 프로필 조회 (팀 멤버 고려)
     const userSnap = await adminDb.collection('users').doc(uid).get()
     const userData = userSnap.data() || {}
-    
+
     let profileOwnerUid = uid
     let profileUserData = userData
 
@@ -93,6 +93,8 @@ export async function GET(req: NextRequest) {
         .orderBy('createdAt', 'desc')
         .limit(200)
         .get()
+      console.log('[DEBUG] bid_notices 조회 결과:', snap.docs.length, 'docs')
+      console.log('[DEBUG] 첫번째 doc id:', snap.docs[0]?.id)
       notices = snap.docs.map(d => ({ id: d.id, ...d.data() } as NoticeDoc))
     } else {
       if (!hasProfile) {
@@ -108,18 +110,21 @@ export async function GET(req: NextRequest) {
           .orderBy('createdAt', 'desc')
           .limit(500)
           .get()
+        console.log('[DEBUG] 500건 조회 결과:', snap.docs.length, 'docs')
         const rawNotices: NoticeDoc[] = snap.docs.map(d => ({ id: d.id, ...d.data() } as NoticeDoc))
 
         notices = rawNotices.filter(n => {
           const title = (n.title ?? '').toLowerCase()
           const bCode = (n.bizCode as string) || ''
-          
+
           const kwMatch = keywords.some(kw => title.includes(kw.toLowerCase()))
           const bcMatch = bCode && bizCodes.some(bc => bCode.includes(bc))
-          
+
           return kwMatch || bcMatch
         })
-
+        console.log('[DEBUG] keywords:', keywords)
+        console.log('[DEBUG] bizCodes:', bizCodes)
+        console.log('[DEBUG] 필터링 후:', notices.length, 'docs')
         // 점수 계산 및 정렬
         notices = notices.map(n => ({
           ...n,
