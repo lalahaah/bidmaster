@@ -1,15 +1,17 @@
 /**
  * GET /api/notices/personalized
  * 
- * [요구사항 반영]
- * 1. 실시간 G2B API 호출 완전 제거 (Firestore 전용)
- * 2. ?all=true: 최신 200건 조회 후 페이지네이션
- * 3. ?all=false (기본): 최신 500건 중 키워드/업종코드 필터링
- * 4. 점수 로직: 기본 50 + 키워드(20~40) + 업종(30) + 금액(20) = 최대 100
+ * [요구사항 반영 - 아키텍처 변경]
+ * 1. users/{uid}/profile 에서 keywords, bizCodes 가져오기
+ * 2. 1시간 이내 검색 이력이 없으면 나라장터 API 실시간 키워드 검색
+ * 3. 검색 결과를 Firestore bid_notices에 저장 (중복 제거)
+ * 4. 결과를 relevanceScore 순으로 정렬해서 반환
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { Timestamp } from 'firebase-admin/firestore'
 import { adminDb, requireAuth } from '@/lib/firebase-admin'
+import { fetchBidNoticesByKeyword, parseAmountToManwon, parseG2BDate, G2BNoticeItem } from '@/lib/g2b'
 import type { CompanyProfile } from '@/types'
 
 type NoticeDoc = {
@@ -52,6 +54,47 @@ function calculateRelevance(notice: NoticeDoc, profile: CompanyProfile): number 
   return Math.min(100, score)
 }
 
+/**
+ * G2B 검색 결과를 Firestore에 저장 (중복 제거)
+ */
+async function saveNoticesToFirestore(items: G2BNoticeItem[]): Promise<number> {
+  if (!items.length) return 0
+  let saved = 0
+
+  const CHUNK = 400
+  for (let i = 0; i < items.length; i += CHUNK) {
+    const batch = adminDb.batch()
+    const chunk = items.slice(i, i + CHUNK)
+    
+    for (const item of chunk) {
+      const docId = `${item.bidNtceNo}-${item.bidNtceOrd}`
+      const ref = adminDb.collection('bid_notices').doc(docId)
+      
+      const deadlineDate = parseG2BDate(item.bidClseDt)
+      batch.set(ref, {
+        title: item.bidNtceNm,
+        orgName: item.ntceInsttNm,
+        bizCode: item.bsnsDivNm || '',
+        estimatedAmount: parseAmountToManwon(item.presmptPrce || '0'),
+        deadline: deadlineDate ? Timestamp.fromDate(deadlineDate) : null,
+        requirements: [
+          item.ntceKindNm,
+          item.bidMthdNm,
+          item.indstrytyLmtYn === 'Y' ? '업종 제한 있음' : '업종 제한 없음',
+        ].filter(Boolean).join(' / '),
+        noticeUrl: item.linkUrl ||
+          `https://www.g2b.go.kr/link/PNPE027_01/single/?bidPbancNo=${item.bidNtceNo}&bidPbancOrd=${item.bidNtceOrd}`,
+        rawData: item,
+        createdAt: Timestamp.now(),
+      }, { merge: true })
+    }
+    
+    await batch.commit()
+    saved += chunk.length
+  }
+  return saved
+}
+
 export async function GET(req: NextRequest) {
   const auth = await requireAuth(req)
   if (auth instanceof NextResponse) return auth
@@ -66,7 +109,7 @@ export async function GET(req: NextRequest) {
     // 1. 유저 프로필 조회 (팀 멤버 고려)
     const userSnap = await adminDb.collection('users').doc(uid).get()
     const userData = userSnap.data() || {}
-
+    
     let profileOwnerUid = uid
     let profileUserData = userData
 
@@ -83,49 +126,69 @@ export async function GET(req: NextRequest) {
     const bizCodes = profile.bizCodes ?? []
     const hasProfile = keywords.length > 0 || bizCodes.length > 0
 
-    // 2. 데이터 조회 및 필터링
+    // 2. 캐시 확인 및 실시간 검색 (1시간 주기)
+    if (!showAll && hasProfile) {
+      const lastFetchedAt: Timestamp | undefined = profileUserData.keywordFetchedAt
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
+      const needsFetch = !lastFetchedAt || lastFetchedAt.toDate() < oneHourAgo
+
+      if (needsFetch) {
+        console.log(`[personalized] 실시간 검색 시작 (${uid}):`, keywords, bizCodes)
+        const searchTerms = Array.from(new Set([...keywords, ...bizCodes]))
+        
+        // 키워드별 나라장터 API 검색 (병렬)
+        const allFetchedResults = await Promise.allSettled(
+          searchTerms.map(term => fetchBidNoticesByKeyword(term))
+        )
+        
+        const flatResults: G2BNoticeItem[] = []
+        allFetchedResults.forEach(res => {
+          if (res.status === 'fulfilled') flatResults.push(...res.value)
+        })
+
+        // Firestore 저장 (중복 제거 포함)
+        await saveNoticesToFirestore(flatResults)
+
+        // 마지막 검색 시각 업데이트 (소유자 기준)
+        await adminDb.collection('users').doc(profileOwnerUid).update({
+          keywordFetchedAt: Timestamp.now()
+        })
+      }
+    }
+
+    // 3. 데이터 조회 및 필터링 (Firestore)
     let notices: NoticeDoc[] = []
     let isPersonalized = false
 
     if (showAll) {
-      // ?all=true: 최신 200건
       const snap = await adminDb.collection('bid_notices')
         .orderBy('createdAt', 'desc')
         .limit(200)
         .get()
-      console.log('[DEBUG] bid_notices 조회 결과:', snap.docs.length, 'docs')
-      console.log('[DEBUG] 첫번째 doc id:', snap.docs[0]?.id)
       notices = snap.docs.map(d => ({ id: d.id, ...d.data() } as NoticeDoc))
     } else {
       if (!hasProfile) {
-        // 프로필 미완성: 최신 200건
         const snap = await adminDb.collection('bid_notices')
           .orderBy('createdAt', 'desc')
           .limit(200)
           .get()
         notices = snap.docs.map(d => ({ id: d.id, ...d.data() } as NoticeDoc))
       } else {
-        // 맞춤 공고: 최신 500건 가져와서 서버 필터링
+        // 맞춤 공고: 최신 500건 중 필터링
         const snap = await adminDb.collection('bid_notices')
           .orderBy('createdAt', 'desc')
           .limit(500)
           .get()
-        console.log('[DEBUG] 500건 조회 결과:', snap.docs.length, 'docs')
-        const rawNotices: NoticeDoc[] = snap.docs.map(d => ({ id: d.id, ...d.data() } as NoticeDoc))
+        const rawNotices = snap.docs.map(d => ({ id: d.id, ...d.data() } as NoticeDoc))
 
         notices = rawNotices.filter(n => {
           const title = (n.title ?? '').toLowerCase()
           const bCode = (n.bizCode as string) || ''
-
           const kwMatch = keywords.some(kw => title.includes(kw.toLowerCase()))
           const bcMatch = bCode && bizCodes.some(bc => bCode.includes(bc))
-
           return kwMatch || bcMatch
         })
-        console.log('[DEBUG] keywords:', keywords)
-        console.log('[DEBUG] bizCodes:', bizCodes)
-        console.log('[DEBUG] 필터링 후:', notices.length, 'docs')
-        // 점수 계산 및 정렬
+
         notices = notices.map(n => ({
           ...n,
           score: calculateRelevance(n, profile)
@@ -135,7 +198,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // 3. 페이지네이션 처리
+    // 4. 페이지네이션 처리
     const total = notices.length
     const startIndex = (page - 1) * limit
     const paginated = notices.slice(startIndex, startIndex + limit)

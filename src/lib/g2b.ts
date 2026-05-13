@@ -195,6 +195,36 @@ export async function fetchAllTodayNotices(options: FetchNoticesOptions = {}): P
   return all
 }
 
+/**
+ * 특정 키워드로 최근 30일간 등록된 공고를 모든 유형(공사/용역/물품/기타)에서 조회합니다.
+ */
+export async function fetchBidNoticesByKeyword(keyword: string): Promise<G2BNoticeItem[]> {
+  const endDate = new Date()
+  const startDate = new Date()
+  startDate.setDate(endDate.getDate() - 30)
+
+  const results = await Promise.allSettled(
+    Object.entries(G2B_ENDPOINTS).map(([, endpoint]) =>
+      fetchBidNotices({ startDate, endDate, keyword, numOfRows: 100 }, endpoint)
+    )
+  )
+
+  const all: G2BNoticeItem[] = []
+  for (const result of results) {
+    if (result.status === 'fulfilled') {
+      all.push(...result.value.items)
+    }
+  }
+
+  // 중복 제거 (bidNtceNo + bidNtceOrd 기준)
+  const unique = new Map<string, G2BNoticeItem>()
+  all.forEach(item => {
+    unique.set(`${item.bidNtceNo}-${item.bidNtceOrd}`, item)
+  })
+
+  return Array.from(unique.values())
+}
+
 // ─── 금액 파싱 유틸 ──────────────────────────────────────────
 
 /** 나라장터 금액 문자열 → 만원 단위 숫자 */

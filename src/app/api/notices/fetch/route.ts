@@ -1,93 +1,125 @@
 /**
- * POST /api/notices/fetch
- *
- * 나라장터에서 오늘 공고를 가져와 Firestore에 저장합니다.
- * 수동 트리거 또는 Vercel Cron으로 매일 08:00 호출됩니다.
- *
- * 보호: CRON_SECRET 헤더로 인증
+ * GET /api/notices/fetch
+ * 
+ * [Vercel Cron용 아키텍처 변경]
+ * 1. 모든 유저의 키워드(keywords) 및 업종코드(bizCodes)를 수집
+ * 2. 수집된 모든 키워드에 대해 나라장터 API 검색 및 Firestore 저장
+ * 3. 사용자 맞춤형 데이터 적재 효율화
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { fetchAllTodayNotices, parseAmountToManwon, parseG2BDate } from '@/lib/g2b'
 import { Timestamp } from 'firebase-admin/firestore'
 import { adminDb } from '@/lib/firebase-admin'
+import { fetchBidNoticesByKeyword, parseAmountToManwon, parseG2BDate, G2BNoticeItem } from '@/lib/g2b'
 
-// Vercel Cron 또는 수동 호출 인증
-const CRON_SECRET = process.env.CRON_SECRET
-
-async function runFetch(req: NextRequest) {
-  // 인증 체크 (선택적 — CRON_SECRET 설정 시)
-  if (CRON_SECRET) {
-    const authHeader = req.headers.get('authorization')
-    if (authHeader !== `Bearer ${CRON_SECRET}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export async function GET(req: NextRequest) {
+  // Cron 인증 확인
+  const authHeader = req.headers.get('authorization')
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
-    const notices = await fetchAllTodayNotices()
+    console.log('[Cron] 키워드 기반 공고 수집 시작...')
 
-    const docRefs = notices.map(n =>
-      adminDb.collection('bid_notices').doc(`${n.bidNtceNo}-${n.bidNtceOrd}`)
-    )
+    // 1. 모든 유저의 검색어 수집
+    const usersSnap = await adminDb.collection('users').get()
+    const allSearchTerms = new Set<string>()
 
-    const snapshots = await Promise.all(docRefs.map(ref => ref.get()))
-    const existingIds = new Set(
-      snapshots.filter(s => s.exists).map(s => s.id)
-    )
+    usersSnap.docs.forEach(doc => {
+      const data = doc.data()
+      const profile = data.profile || {}
+      
+      const keywords = profile.keywords || []
+      const bizCodes = profile.bizCodes || []
+      
+      keywords.forEach((k: string) => k && allSearchTerms.add(k))
+      bizCodes.forEach((b: string) => b && allSearchTerms.add(b))
+    })
 
-    // Firestore 배치는 최대 500건 제한 → 청크로 분할
-    const BATCH_SIZE = 400
-    let saved = 0
-    let skipped = 0
+    const terms = Array.from(allSearchTerms)
+    console.log(`[Cron] 수집된 고유 키워드/업종코드 (${terms.length}개):`, terms)
 
-    const newNotices = notices
-      .map((notice, i) => ({ notice, ref: docRefs[i] }))
-      .filter(({ ref }) => !existingIds.has(ref.id))
-
-    for (let start = 0; start < newNotices.length; start += BATCH_SIZE) {
-      const chunk = newNotices.slice(start, start + BATCH_SIZE)
-      const batch = adminDb.batch()
-
-      chunk.forEach(({ notice, ref }) => {
-        const deadlineDate = parseG2BDate(notice.bidClseDt)
-        const estimatedAmount = parseAmountToManwon(notice.presmptPrce || '0')
-
-        batch.set(ref, {
-          title: notice.bidNtceNm,
-          orgName: notice.ntceInsttNm,
-          bizCode: notice.bsnsDivNm || '',
-          estimatedAmount,
-          deadline: deadlineDate ? Timestamp.fromDate(deadlineDate) : null,
-          requirements: [
-            notice.ntceKindNm,
-            notice.bidMthdNm,
-            notice.indstrytyLmtYn === 'Y' ? '업종 제한 있음' : '업종 제한 없음',
-          ].filter(Boolean).join(' / '),
-          noticeUrl: notice.linkUrl || `https://www.g2b.go.kr/link/PNPE027_01/single/?bidPbancNo=${notice.bidNtceNo}&bidPbancOrd=${notice.bidNtceOrd}`,
-          rawData: notice,
-          createdAt: Timestamp.now(),
-        })
-        saved++
-      })
-
-      await batch.commit()
+    if (terms.length === 0) {
+      return NextResponse.json({ message: 'No keywords found to search' })
     }
 
-    skipped = notices.length - saved
+    // 2. 키워드별 나라장터 API 검색 (병렬 처리하되 과부하 방지 위해 청크 단위 권장)
+    let totalSaved = 0
+    const CHUNK_SIZE = 5 // 동시에 5개 키워드씩 검색
+    
+    for (let i = 0; i < terms.length; i += CHUNK_SIZE) {
+      const chunk = terms.slice(i, i + CHUNK_SIZE)
+      console.log(`[Cron] 검색 진행 중... (${i + 1}/${terms.length})`)
 
-    return NextResponse.json({ ok: true, fetched: notices.length, saved, skipped })
+      const results = await Promise.allSettled(
+        chunk.map(term => fetchBidNoticesByKeyword(term))
+      )
+
+      const flatResults: G2BNoticeItem[] = []
+      results.forEach(res => {
+        if (res.status === 'fulfilled') flatResults.push(...res.value)
+      })
+
+      // 3. Firestore 저장 (중복 제거 포함)
+      if (flatResults.length > 0) {
+        const savedCount = await saveToFirestore(flatResults)
+        totalSaved += savedCount
+      }
+    }
+
+    console.log(`[Cron] 수집 완료. 총 저장 시도 건수: ${totalSaved}`)
+    return NextResponse.json({ 
+      success: true, 
+      termsCount: terms.length,
+      totalSaved 
+    })
+
   } catch (err) {
-    console.error('[notices/fetch] 오류:', err)
-    return NextResponse.json(
-      { error: String(err) },
-      { status: 500 }
-    )
+    console.error('[Cron] 오류:', err)
+    return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 }
 
-// Vercel Cron은 GET으로 호출, 수동 트리거는 POST로 호출
-export async function GET(req: NextRequest) { return runFetch(req) }
-export async function POST(req: NextRequest) { return runFetch(req) }
+/**
+ * G2B 검색 결과를 Firestore에 저장 (중복 제거 및 업데이트)
+ */
+async function saveToFirestore(items: G2BNoticeItem[]): Promise<number> {
+  if (!items.length) return 0
+  let saved = 0
+
+  const CHUNK = 400
+  for (let i = 0; i < items.length; i += CHUNK) {
+    const batch = adminDb.batch()
+    const chunk = items.slice(i, i + CHUNK)
+    
+    for (const item of chunk) {
+      const docId = `${item.bidNtceNo}-${item.bidNtceOrd}`
+      const ref = adminDb.collection('bid_notices').doc(docId)
+      
+      const deadlineDate = parseG2BDate(item.bidClseDt)
+      batch.set(ref, {
+        title: item.bidNtceNm,
+        orgName: item.ntceInsttNm,
+        bizCode: item.bsnsDivNm || '',
+        estimatedAmount: parseAmountToManwon(item.presmptPrce || '0'),
+        deadline: deadlineDate ? Timestamp.fromDate(deadlineDate) : null,
+        requirements: [
+          item.ntceKindNm,
+          item.bidMthdNm,
+          item.indstrytyLmtYn === 'Y' ? '업종 제한 있음' : '업종 제한 없음',
+        ].filter(Boolean).join(' / '),
+        noticeUrl: item.linkUrl ||
+          `https://www.g2b.go.kr/link/PNPE027_01/single/?bidPbancNo=${item.bidNtceNo}&bidPbancOrd=${item.bidNtceOrd}`,
+        rawData: item,
+        createdAt: Timestamp.now(),
+      }, { merge: true })
+    }
+    
+    await batch.commit()
+    saved += chunk.length
+  }
+  return saved
+}
 
 export const dynamic = 'force-dynamic'
