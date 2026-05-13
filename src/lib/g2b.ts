@@ -84,6 +84,16 @@ const G2B_ENDPOINTS: Record<string, string> = {
 }
 
 /**
+ * 키워드 검색 전용 엔드포인트 (PPSSrch)
+ */
+const G2B_SEARCH_ENDPOINTS: Record<string, string> = {
+  공사: 'getBidPblancListInfoCnstwkPPSSrch',
+  용역: 'getBidPblancListInfoServcPPSSrch',
+  외자: 'getBidPblancListInfoFrgcptPPSSrch',
+  물품: 'getBidPblancListInfoThngPPSSrch',
+}
+
+/**
  * 특정 엔드포인트에서 나라장터 입찰공고 목록을 가져옵니다.
  * 서버 사이드 전용 (API_KEY 사용)
  */
@@ -204,7 +214,7 @@ export async function fetchBidNoticesByKeyword(keyword: string): Promise<G2BNoti
   startDate.setDate(endDate.getDate() - 30)
 
   const results = await Promise.allSettled(
-    Object.entries(G2B_ENDPOINTS).map(([, endpoint]) =>
+    Object.entries(G2B_SEARCH_ENDPOINTS).map(([, endpoint]) =>
       fetchBidNotices({ startDate, endDate, keyword, numOfRows: 100 }, endpoint)
     )
   )
