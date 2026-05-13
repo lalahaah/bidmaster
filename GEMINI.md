@@ -86,22 +86,19 @@ bid_notices/{bidNtceNo}:
   createdAt, analyzedAt: timestamp
 
 ## 완성된 주요 기능
+- **팀 관리 (Enterprise)**: Enterprise 사용자용 팀원 초대, 삭제 및 데이터 공유 환경 구현 완료
+- **결제 내역 조회**: 설정 페이지 내 결제 히스토리 표시 및 내역 자동 기록 기능 구현 완료
 - **구독 결제 (토스페이먼츠)**: Pro/Enterprise 플랜 결제 및 자동 권한 부여 구현 완료
 - **인증 및 보안**: Firebase Auth 상태와 미들웨어 세션 동기화 구현 완료
 - **카카오 알림톡 (알리고 API)**: score >= 70 및 알림 설정 시 자동 발송 (LMS)
 - **자동 공고 수집 (Vercel Cron)**: 매일 08:00 KST (23:00 UTC) 실행
 - **프로필 상세화**: 참여 희망 금액 범위, 실적 키워드, 프로필 완성도 게이지
-- **AI 매칭 고도화**: 금액 범위 및 키워드 기반 가중치 점수 산출 적용
+- **AI 매칭 고도화**: 금액 범위 및 키워드 기반 가중치 점수 산출 적용 (페이지네이션 지원)
 
 ## 미완성 기능 (우선순위 순)
 
-### P2 — 팀 관리 (Enterprise)
-- Enterprise 플랜 사용자를 위한 팀원 초대 및 관리 기능
-- Firestore `users/{uid}/team` 컬렉션 또는 필드 활용
-
-### P3 — 결제 내역 조회 및 해지
-- 대시보드 설정 페이지 내 결제 내역(Billing History) 표시
-- Toss Payments 정기결제 해지 API 연동 (현재는 단건 기반 만료 구조)
+### P3 — 결제 해지 자동화
+- Toss Payments 정기결제 해지 API 연동 (현재는 단건 기반 만료 구조로, 정기 결제 도입 시 필요)
 
 ## 작업 시 주의사항
 1. Firebase Admin SDK는 서버(API Route)에서만 사용
