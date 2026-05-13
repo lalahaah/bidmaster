@@ -102,16 +102,20 @@ function daysUntilDeadline(notice: NoticeDoc): number | null {
 // 반환값은 클라이언트에도 내려줘서 프론트 정렬에도 활용
 // ──────────────────────────────────────────────────────────────
 function relevanceScore(notice: NoticeDoc, profile: CompanyProfile): number {
-  let score = 0
-  const haystack = `${notice.title ?? ''} ${notice.requirements ?? ''}`.toLowerCase()
+  let score = 50 // 기본값
 
-  // 1. 키워드 매칭 (+10/개)
-  for (const kw of [...(profile.keywords ?? []), ...(profile.bizCodes ?? [])]) {
-    if (haystack.includes(kw.toLowerCase())) score += 10
-  }
+  const title = (notice.title ?? '').toLowerCase()
+  const bizCode = (notice.bizCode as string) || ''
+  const keywords = profile.keywords ?? []
+  const bizCodes = profile.bizCodes ?? []
 
-  // 2. bizCode 필드 매칭 (직접 일치 시 보너스)
-  if (notice.bizCode && profile.bizCodes.some(bc => (notice.bizCode as string).includes(bc))) {
+  // 1. 키워드 매칭 (제목 기준)
+  const kwMatches = keywords.filter(kw => title.includes(kw.toLowerCase())).length
+  if (kwMatches >= 2) score += 40
+  else if (kwMatches === 1) score += 20
+
+  // 2. bizCode 필드 매칭
+  if (bizCode && bizCodes.some(bc => bizCode.includes(bc))) {
     score += 30
   }
 
@@ -120,20 +124,12 @@ function relevanceScore(notice: NoticeDoc, profile: CompanyProfile): number {
   const amountMax = profile.amountMax ?? 0
   const amount = Number(notice.estimatedAmount ?? 0)
   if (amount > 0 && amountMin > 0 && amountMax > 0) {
-    score += amount >= amountMin && amount <= amountMax ? 20 : -15
+    if (amount >= amountMin && amount <= amountMax) score += 20
   }
 
-  // 4. 마감일 기반 우선순위
-  const days = daysUntilDeadline(notice)
-  if (days !== null) {
-    if (days < 0)       score -= 50
-    else if (days <= 7) score -= 20
-    else if (days <= 14) score += 10
-    else if (days <= 30) score += 25
-    else                 score += 5
-  }
-
-  return score
+  // 4. 마감일 가중치는 정렬용 (점수에는 미포함하거나 별도 합산)
+  // 여기서는 순수 관련도 점수만 반환 (0~100 클램프 생략 또는 필요시 적용)
+  return Math.min(100, score)
 }
 
 function hasTextProfile(profile: CompanyProfile): boolean {
@@ -156,6 +152,8 @@ export async function GET(req: NextRequest) {
 
   const url = new URL(req.url)
   const showAll = url.searchParams.get('all') === 'true'
+  const page = parseInt(url.searchParams.get('page') || '1')
+  const limit = parseInt(url.searchParams.get('limit') || (showAll ? '50' : '50'))
 
   try {
     const userSnap = await adminDb.collection('users').doc(uid).get()
@@ -163,7 +161,9 @@ export async function GET(req: NextRequest) {
     const profile = (userData.profile ?? {}) as CompanyProfile
 
     // ── 텍스트 프로필 있으면 G2B 키워드 검색 (1시간 캐시) ───
-    const searchTerms = [...(profile.keywords ?? []), ...(profile.bizCodes ?? [])]
+    const keywords = profile.keywords ?? []
+    const bizCodes = profile.bizCodes ?? []
+    const searchTerms = [...keywords, ...bizCodes]
     let g2bFetched = 0
 
     if (!showAll && hasTextProfile(profile)) {
@@ -191,54 +191,61 @@ export async function GET(req: NextRequest) {
     const snap = await adminDb
       .collection('bid_notices')
       .orderBy('createdAt', 'desc')
-      .limit(showAll ? 500 : 1000)
+      .limit(200) // 요청에 따라 200건으로 조정
       .get()
 
     const allNotices: NoticeDoc[] = snap.docs.map(d => ({ id: d.id, ...d.data() }))
 
     // ── 필터링 로직 ──
     let matched: NoticeDoc[] = []
+    const keywords = profile.keywords ?? []
+    const bizCodes = profile.bizCodes ?? []
 
     if (showAll) {
       matched = allNotices
-    } else if (!hasRealProfile(profile)) {
-      matched = allNotices.slice(0, 50)
+    } else if (keywords.length === 0 && bizCodes.length === 0) {
+      // 키워드와 bizCode 둘 다 없으면 전체 공고 표시
+      matched = allNotices
     } else {
       matched = allNotices.filter(n => {
+        const title = (n.title ?? '').toLowerCase()
         const bizCode = (n.bizCode as string) || ''
-        const haystack = `${n.title ?? ''} ${n.requirements ?? ''}`.toLowerCase()
 
-        // 1. bizCode 필드 매칭
-        const bizCodeMatch = bizCode && profile.bizCodes.some(bc => bizCode.includes(bc))
+        // 우선순위 1: 키워드 매칭 (제목)
+        const keywordMatch = keywords.some(kw => title.includes(kw.toLowerCase()))
         
-        // 2. 키워드 매칭
-        const keywordMatch = searchTerms.some(term => haystack.includes(term.toLowerCase()))
+        // 우선순위 2: bizCode 매칭
+        const bizCodeMatch = bizCode && bizCodes.some(bc => bizCode.includes(bc))
 
-        // 3. bizCode가 비어있는 공고는 일단 포함 (유저 요청: 필터링 완화)
-        const isEmptyBizCode = !bizCode || bizCode === ""
-
-        return bizCodeMatch || keywordMatch || isEmptyBizCode
+        return keywordMatch || bizCodeMatch
       })
     }
 
-    // 관련도 + 마감일 복합 정렬
-    const ranked = matched
-      .map(n => ({
-        ...n,
-        _score: hasRealProfile(profile) ? relevanceScore(n, profile) : 0,
-        _daysLeft: daysUntilDeadline(n),
-      }))
-      .sort((a, b) => {
-        if (showAll) return 0 // 정렬은 클라이언트에서 수행하거나 생성일순 유지
-        return b._score - a._score
-      })
-      .slice(0, showAll ? 500 : 50)
+    // 관련도 점수 계산 및 정렬
+    const ranked = matched.map(n => ({
+      ...n,
+      _score: hasRealProfile(profile) ? relevanceScore(n, profile) : 0,
+      _daysLeft: daysUntilDeadline(n),
+    }))
+
+    // '내 맞춤 공고' 탭에서는 항상 점수순 정렬 (키워드/업종코드 없어도 금액 등 점수 반영)
+    if (!showAll) {
+      ranked.sort((a, b) => b._score - a._score)
+    }
+
+    // 페이지네이션 (50건씩)
+    const startIndex = (page - 1) * limit
+    const paginated = ranked.slice(startIndex, startIndex + limit)
+    const hasMore = ranked.length > startIndex + limit
 
     return NextResponse.json({
-      notices: ranked,
-      personalized: !showAll && hasRealProfile(profile),
+      notices: paginated,
+      personalized: !showAll && (keywords.length > 0 || bizCodes.length > 0),
       g2bFetched,
-      total: matched.length,
+      total: ranked.length,
+      page,
+      limit,
+      hasMore,
     })
   } catch (err) {
     console.error('[notices/personalized] 오류:', err)

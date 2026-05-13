@@ -67,29 +67,45 @@ function DashboardContent() {
   const searchParams = useSearchParams()
   const [showWelcome, setShowWelcome] = useState(searchParams.get('welcome') === 'true')
   const [notices, setNotices] = useState<EnrichedNotice[]>([])
+  const [totalCount, setTotalCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [loadingMsg, setLoadingMsg] = useState('공고 불러오는 중...')
   const [selected, setSelected] = useState<EnrichedNotice | null>(null)
   const [isPersonalized, setIsPersonalized] = useState(false)
   const [sortKey, setSortKey] = useState<SortKey>('relevance')
   const [activeTab, setActiveTab] = useState<'personalized' | 'all'>('personalized')
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(false)
+  const [isMoreLoading, setIsMoreLoading] = useState(false)
 
-  const loadNotices = useCallback(async () => {
+  const loadNotices = useCallback(async (isMore = false) => {
     if (!user) return
-    setLoading(true)
+    if (isMore) setIsMoreLoading(true)
+    else {
+      setLoading(true)
+      setNotices([])
+    }
+
     setLoadingMsg(activeTab === 'personalized' ? '내 프로필 맞춤 공고 검색 중...' : '전체 공고 불러오는 중...')
+    
     try {
       const token = await auth!.currentUser!.getIdToken()
-      const url = `/api/notices/personalized${activeTab === 'all' ? '?all=true' : ''}`
+      const currentPage = isMore ? page + 1 : 1
+      const url = `/api/notices/personalized?page=${currentPage}&limit=50${activeTab === 'all' ? '&all=true' : ''}`
+      
       const [res, analyses] = await Promise.all([
-        fetch(url, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+        fetch(url, { headers: { Authorization: `Bearer ${token}` } }),
         getUserAnalyses(user.uid),
       ])
+      
       const data = await res.json()
       const rawNotices: BidNotice[] = data.notices ?? []
       setIsPersonalized(data.personalized ?? false)
+      setHasMore(data.hasMore ?? false)
+      setTotalCount(data.total ?? 0)
+      
+      if (isMore) setPage(currentPage)
+      else setPage(1)
 
       const enriched: EnrichedNotice[] = rawNotices.map((n) => {
         const analysis = analyses[n.id]
@@ -99,14 +115,20 @@ function DashboardContent() {
           aiSummary: analysis?.aiSummary ?? null,
         }
       })
-      setNotices(enriched)
+
+      if (isMore) {
+        setNotices(prev => [...prev, ...enriched])
+      } else {
+        setNotices(enriched)
+      }
     } finally {
       setLoading(false)
+      setIsMoreLoading(false)
       setLoadingMsg('공고 불러오는 중...')
     }
-  }, [user, activeTab])
+  }, [user, activeTab, page])
 
-  useEffect(() => { loadNotices() }, [loadNotices])
+  useEffect(() => { loadNotices() }, [activeTab]) // 탭 바뀔 때만 초기 로드
 
   const plan = userDoc?.subscription.plan ?? 'free'
   const isTestAccount = TEST_ACCOUNTS.includes(user?.email ?? '')
@@ -115,10 +137,9 @@ function DashboardContent() {
   const remaining = isTestAccount ? Infinity : Math.max(0, quota - usedCount)
 
   // KPI
-  const total = notices.length
+  const analyzed = notices.filter(n => n.aiSummary).length
   const possible = notices.filter(n => n.matchStatus === '가능').length
   const conditional = notices.filter(n => n.matchStatus === '조건부').length
-  const analyzed = notices.filter(n => n.aiSummary).length
   const avgScore = analyzed > 0
     ? Math.round(notices.filter(n => n.aiSummary).reduce((s, n) => s + (n.aiSummary?.score ?? 0), 0) / analyzed)
     : 0
@@ -192,20 +213,20 @@ function DashboardContent() {
       {/* KPI */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
-          { label: '수집된 공고', value: total, icon: '📋' },
-          { label: '참가 가능',   value: possible, icon: '✅', highlight: true },
-          { label: '조건부',      value: conditional, icon: '⚠️' },
-          { label: '평균 점수',   value: analyzed > 0 ? `${avgScore}점` : '-', icon: '🎯' },
+          { label: '수집 공고',   value: totalCount, icon: '📋' },
+          { label: 'AI 분석 완료', value: analyzed, icon: '🎯' },
+          { label: '참가 가능',   value: possible, icon: '✅', highlight: true, color: '#4ade80' },
+          { label: '조건부',      value: conditional, icon: '⚠️', highlight: conditional > 0, color: '#facc15' },
         ].map((k) => (
           <div
             key={k.label}
             className="rounded-2xl p-5"
             style={{
-              background: k.highlight && possible > 0
-                ? 'linear-gradient(135deg, rgba(0,107,122,0.12), rgba(0,107,122,0.08))'
+              background: k.highlight
+                ? `linear-gradient(135deg, rgba(${k.color === '#4ade80' ? '34,197,94' : '234,179,8'}, 0.12), rgba(${k.color === '#4ade80' ? '34,197,94' : '234,179,8'}, 0.08))`
                 : 'rgba(255,255,255,0.04)',
-              border: k.highlight && possible > 0
-                ? '1px solid rgba(0,107,122,0.25)'
+              border: k.highlight
+                ? `1px solid rgba(${k.color === '#4ade80' ? '34,197,94' : '234,179,8'}, 0.25)`
                 : '1px solid rgba(255,255,255,0.08)',
             }}
           >
@@ -213,7 +234,9 @@ function DashboardContent() {
               <span className="text-white/40 text-sm">{k.label}</span>
               <span className="text-xl">{k.icon}</span>
             </div>
-            <span className="text-3xl font-bold text-white">{k.value}</span>
+            <span className="text-3xl font-bold text-white" style={k.highlight ? { color: k.color } : {}}>
+              {k.value}
+            </span>
           </div>
         ))}
       </div>
@@ -401,6 +424,23 @@ function DashboardContent() {
               </button>
               )
             })}
+
+            {hasMore && !loading && (
+              <div className="p-6 flex justify-center">
+                <button
+                  onClick={() => loadNotices(true)}
+                  disabled={isMoreLoading}
+                  className="px-6 py-2.5 rounded-xl text-sm font-medium text-white/50 hover:text-white hover:bg-white/5 transition-all flex items-center gap-2"
+                  style={{ border: '1px solid rgba(255,255,255,0.1)' }}
+                >
+                  {isMoreLoading ? (
+                    <><div className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white animate-spin" /> 불러오는 중...</>
+                  ) : (
+                    '더 보기'
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
